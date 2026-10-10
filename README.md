@@ -6,6 +6,8 @@ Editoren taler ikke med Cicero. Den laver kun tekst, og alt gemmes i den browser
 
 **Brug den:** https://kaspersvangren.github.io/cicero-beskedvaerksted/
 
+**Skitse af den kommende brugerflade** (drag'n'drop, fire trin, rundtur): https://kaspersvangren.github.io/cicero-beskedvaerksted/skitse/
+
 ## Indhold
 
 | Fil | Hvad |
