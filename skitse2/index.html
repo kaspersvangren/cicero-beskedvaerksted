@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Beskedværkstedet – byggesæt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+/* Layout: beskeden i midten som en rigtig mail; til højre enten "Tilføj" eller indstillinger for det valgte afsnit.
+   Farver: lyst papir, marineblæk, havblå accent; modul=blomme, felt=blå, kun-for=grøn. */
+:root {
+  --bg: #f4f6f9; --card: #ffffff; --paper: #ffffff; --ink: #1d2738; --muted: #6a7689; --line: #e2e7ef; --line2: #cfd7e3;
+  --accent: #1f6fb2; --accent-ink: #ffffff; --accent-soft: #e7f0fa;
+  --field: #2357a8; --field-soft: #eaf0fc; --mod: #8a3fa0; --mod-soft: #f6edfa; --who: #1e8063; --who-soft: #e4f5ee;
+  --muted-soft: #eef1f5; --shadow: 0 1px 2px rgba(25,40,70,.06), 0 10px 30px rgba(25,40,70,.08);
+  --f-head: "Rubik", system-ui, sans-serif; --f-body: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161d; --card: #1a2029; --paper: #1f2631; --ink: #e8edf4; --muted: #9ba7b8; --line: #2a333f; --line2: #384353;
+  --accent: #6fb1ef; --accent-ink: #0b1522; --accent-soft: #1b2b40; --field: #9dbcff; --field-soft: #1f2b45;
+  --mod: #dcacee; --mod-soft: #2c2135; --who: #74d4b4; --who-soft: #15302a; --muted-soft: #242c37;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.3); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #12161d; --card: #1a2029; --paper: #1f2631; --ink: #e8edf4; --muted: #9ba7b8; --line: #2a333f; --line2: #384353;
+  --accent: #6fb1ef; --accent-ink: #0b1522; --accent-soft: #1b2b40; --field: #9dbcff; --field-soft: #1f2b45;
+  --mod: #dcacee; --mod-soft: #2c2135; --who: #74d4b4; --who-soft: #15302a; --muted-soft: #242c37;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.3); color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 var(--f-body); }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 20px; padding-block: 0 48px; }
+.banner { background: var(--muted-soft); color: var(--muted); font-size: 14px; text-align: center; padding: 6px 16px; }
+
+.top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding-block: 18px 10px; }
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo .mark { width: 36px; height: 36px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; }
+.logo h1 { margin: 0; font: 600 20px var(--f-head); }
+.logo small { display: block; color: var(--muted); font-size: 13px; }
+.crumbs { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 15px; margin-left: 8px; }
+.crumbs button { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; font-weight: 600; }
+.sp { flex: 1; }
+.btn { display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid var(--line2); background: var(--card); border-radius: 10px; padding: 9px 16px; cursor: pointer; font-weight: 600; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.small { padding: 5px 12px; font-size: 14.5px; border-radius: 8px; }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+.ico { width: 18px; height: 18px; flex: none; }
+
+/* vælg besked */
+.choose h2 { font: 600 26px var(--f-head); margin: 18px 0 4px; }
+.choose p.l { color: var(--muted); margin: 0 0 20px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+.mcard { text-align: left; border: 1.5px solid var(--line); background: var(--card); border-radius: 16px; padding: 18px; cursor: pointer; box-shadow: var(--shadow); display: grid; gap: 4px; }
+.mcard:hover { border-color: var(--accent); }
+.mcard h3 { margin: 0; font: 600 17px var(--f-head); }
+.mcard p { margin: 0; color: var(--muted); font-size: 15px; }
+.mcard .cat { font-size: 12.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+
+/* hovedvisning */
+.work { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 22px; align-items: start; margin-top: 8px; }
+@media (max-width: 960px) { .work { grid-template-columns: minmax(0, 1fr); } }
+.viewas { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; font-size: 15px; color: var(--muted); }
+.seg { display: inline-flex; background: var(--muted-soft); border-radius: 999px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; padding: 5px 14px; border-radius: 999px; cursor: pointer; font-weight: 600; color: var(--muted); font-size: 14.5px; }
+.seg button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+.mail { background: var(--paper); border-radius: 18px; box-shadow: var(--shadow); border: 1px solid var(--line); overflow: hidden; }
+.mhead { padding: 18px 26px 14px; border-bottom: 1px solid var(--line); display: grid; gap: 6px; }
+.mhead .meta { font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.mhead .av { width: 30px; height: 30px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font: 600 13px var(--f-head); }
+.subject { font: 600 21px/1.3 var(--f-head); outline: none; border-radius: 8px; padding: 2px 6px; margin-left: -6px; }
+.subject:hover { background: var(--muted-soft); }
+.subject:focus { background: var(--accent-soft); }
+.mbody { padding: 14px 18px 26px; }
+
+.sec { position: relative; border-radius: 12px; padding: 6px 8px; border: 1.5px solid transparent; transition: border-color .1s, background .1s; }
+.sec:hover { border-color: var(--line); }
+.sec.sel { border-color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 40%, transparent); }
+.sec.hidden { opacity: .45; }
+.sec.hidden .content { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 50%, transparent); }
+.sec.dragging { opacity: .4; }
+.bar { position: absolute; top: -13px; right: 10px; display: none; gap: 4px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 2px 6px; box-shadow: 0 2px 8px rgba(0,0,0,.08); z-index: 3; }
+.sec:hover .bar, .sec.sel .bar, .sec:focus-within .bar { display: flex; }
+.bar button { border: 0; background: transparent; cursor: pointer; padding: 3px 7px; border-radius: 999px; font-size: 13.5px; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+.bar button:hover { background: var(--muted-soft); color: var(--ink); }
+.bar .grip { cursor: grab; }
+.tag { position: absolute; left: -2px; top: -11px; font: 600 11.5px var(--f-head); letter-spacing: .04em; text-transform: uppercase; padding: 1px 8px; border-radius: 999px; background: var(--who-soft); color: var(--who); border: 1px solid color-mix(in srgb, var(--who) 30%, transparent); }
+.content { white-space: pre-wrap; overflow-wrap: anywhere; padding: 4px 6px; border-radius: 8px; outline: none; min-height: 1.55em; }
+.content[contenteditable="true"]:focus { background: var(--card); box-shadow: inset 0 0 0 1.5px var(--line2); }
+.mod { border-radius: 10px; background: color-mix(in srgb, var(--mod-soft) 45%, transparent); padding: 8px 10px; cursor: pointer; }
+.mod .mlabel { font: 600 11.5px var(--f-head); letter-spacing: .05em; text-transform: uppercase; color: var(--mod); margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
+.loans { display: grid; gap: 10px; }
+.loan { display: grid; gap: 0; }
+.chip { display: inline; padding: 0 5px; border-radius: 6px; background: var(--field-soft); color: var(--field); cursor: pointer; border-bottom: 1.5px dashed color-mix(in srgb, var(--field) 50%, transparent); white-space: nowrap; }
+.chip.word { background: color-mix(in srgb, var(--who-soft) 70%, transparent); color: var(--who); border-bottom-color: color-mix(in srgb, var(--who) 50%, transparent); }
+.gap { height: 8px; position: relative; display: flex; align-items: center; justify-content: center; }
+.gap button { opacity: 0; border: 1.5px dashed var(--line2); background: var(--card); color: var(--muted); border-radius: 999px; padding: 0 12px; font-size: 13px; cursor: pointer; transition: opacity .1s; position: relative; z-index: 2; }
+.gap:hover button, .gap button:focus { opacity: 1; }
+.gap.over { height: 36px; }
+.gap.over::before { content: ""; position: absolute; inset: 6px 6px; border-radius: 10px; background: var(--accent-soft); border: 2px dashed var(--accent); }
+body.dragging .gap { height: 20px; }
+
+/* højre side */
+.side { display: grid; gap: 14px; position: sticky; top: 14px; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.panel h3 { margin: 0; font: 600 17px var(--f-head); display: flex; align-items: center; gap: 8px; }
+.panel .sub { margin: -6px 0 0; font-size: 14px; color: var(--muted); }
+.adds { display: grid; gap: 8px; }
+.add { display: flex; gap: 12px; align-items: center; text-align: left; border: 1.5px solid var(--line); background: var(--card); border-radius: 12px; padding: 10px 12px; cursor: grab; }
+.add:hover { border-color: var(--accent); }
+.add .sw { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; flex: none; }
+.add b { display: block; font-size: 15.5px; }
+.add small { color: var(--muted); font-size: 13.5px; }
+.q { display: grid; gap: 6px; }
+.q .l { font-weight: 600; font-size: 14.5px; }
+.q .hint { font-size: 13.5px; color: var(--muted); }
+.q input[type="text"] { padding: 8px 10px; border: 1.5px solid var(--line2); border-radius: 10px; background: var(--card); width: 100%; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { border: 1.5px solid var(--line2); background: var(--card); border-radius: 999px; padding: 4px 12px; cursor: pointer; font-size: 14px; }
+.pill[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.cols { display: grid; gap: 4px; }
+.col { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--card); }
+.col.on { border-color: color-mix(in srgb, var(--mod) 40%, var(--line)); background: color-mix(in srgb, var(--mod-soft) 50%, var(--card)); }
+.col .grip { cursor: grab; color: var(--muted); padding: 0 2px; }
+.col label { flex: 1; display: flex; gap: 8px; align-items: center; cursor: pointer; }
+.col input { width: 17px; height: 17px; accent-color: var(--mod); }
+.col .mv { border: 0; background: transparent; color: var(--muted); cursor: pointer; padding: 2px 5px; border-radius: 6px; }
+.col .mv:hover { background: var(--muted-soft); color: var(--ink); }
+.col.drop { border-style: dashed; border-color: var(--accent); }
+.note { font-size: 14px; color: var(--muted); background: var(--muted-soft); border-radius: 10px; padding: 10px 12px; }
+.adv { font-size: 14px; }
+.adv summary { cursor: pointer; color: var(--muted); }
+.adv pre { margin: 8px 0 0; font: 12px/1.5 ui-monospace, Menlo, monospace; background: var(--muted-soft); border-radius: 8px; padding: 10px; overflow-x: auto; white-space: pre; }
+
+/* popover med felter */
+.pop { position: fixed; z-index: 50; background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,.18); padding: 8px; width: 270px; display: grid; gap: 2px; }
+.pop .h { font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 6px 8px 2px; }
+.pop button { border: 0; background: transparent; text-align: left; padding: 7px 10px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+.pop button:hover, .pop button:focus { background: var(--accent-soft); outline: none; }
+.pop button small { color: var(--muted); }
+
+.modal-bg { position: fixed; inset: 0; background: rgba(10,18,30,.45); z-index: 60; display: grid; place-items: start center; padding: 8vh 16px 16px; overflow-y: auto; }
+.modal { background: var(--card); border-radius: 18px; width: min(560px, 100%); padding: 24px; display: grid; gap: 14px; box-shadow: 0 30px 70px rgba(0,0,0,.35); }
+.modal h3 { margin: 0; font: 600 21px var(--f-head); }
+.modal ol { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 10px; z-index: 70; font-size: 15px; }
+</style>
+</head>
+<body>
+<div class="banner">Skitse 2 · byggesæt. Ikke koblet til motoren endnu.</div>
+<div class="wrap" id="app"></div>
+<script>
+(function () {
+  'use strict';
+  // ---------- eksempeldata ----------
+  const PEOPLE = {
+    a1: { label: 'Voksen, 1 lån', name: 'Sofie Lund', child: false, n: 1 },
+    a3: { label: 'Voksen, 3 lån', name: 'Sofie Lund', child: false, n: 3 },
+    c2: { label: 'Barn, 2 lån', name: 'Emil Lund', child: true, n: 2 }
+  };
+  const LOANS = [
+    { title: 'Zappa', author: 'Bjarne Reuter', due: new Date(2026, 9, 23), loan: new Date(2026, 8, 25), no: '5163870', branch: 'Hovedbiblioteket' },
+    { title: 'Ternet Ninja', author: 'Anders Matthesen', due: new Date(2026, 9, 23), loan: new Date(2026, 8, 25), no: '5168581', branch: 'Hovedbiblioteket' },
+    { title: 'Kongens Fald', author: 'Johannes V. Jensen', due: new Date(2026, 9, 26), loan: new Date(2026, 8, 28), no: '5173292', branch: 'Bøgevang Bibliotek' }
+  ];
+  const LIB = { lib: 'Bøgevang Bibliotekerne', web: 'bibliotek.example.dk', phone: '70 00 00 00', branch: 'Hovedbiblioteket', addr: 'Biblioteksvej 1, 4321 Bøgevang' };
+  const MON = ['januar', 'februar', 'marts', 'april', 'maj', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'december'];
+  const DAY = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
+  const p2 = (n) => String(n).padStart(2, '0');
+  const DATEFMT = [
+    (d) => p2(d.getDate()) + '.' + p2(d.getMonth() + 1) + '.' + d.getFullYear(),
+    (d) => d.getDate() + '. ' + MON[d.getMonth()],
+    (d) => DAY[d.getDay()] + ' d. ' + d.getDate() + '. ' + MON[d.getMonth()]
+  ];
+  // felter til teksten: de få, der giver mening for beskeden
+  const FIELDS = [
+    ['name', 'Lånerens navn', (c) => c.p.name],
+    ['count', 'Antal lån', (c) => String(c.p.n)],
+    ['lib', 'Bibliotekets navn', () => LIB.lib],
+    ['web', 'Bibliotekets hjemmeside', () => LIB.web],
+    ['branch', 'Lånerens filial', () => LIB.branch]
+  ];
+  const MORE = [['phone', 'Bibliotekets telefon', () => LIB.phone], ['number', 'Lånernummer', () => 'L0001234'], ['first', 'Første afleveringsdato', (c) => DATEFMT[1](LOANS[0].due)]];
+  const WORDS = [['w1', 'lånet / lånene', 'lånet', 'lånene'], ['w2', 'dit / dine', 'dit', 'dine'], ['w3', 'dette lån / disse lån', 'dette lån', 'disse lån']];
+  const ALL = Object.fromEntries(FIELDS.concat(MORE).map(([k, l, f]) => [k, { l, f }]));
+  const WORD = Object.fromEntries(WORDS.map(([k, l, one, many]) => [k, { l, one, many }]));
+  // oplysninger i lånelisten
+  const COLS = {
+    title: { l: 'Titel', v: (L) => L.title, pre: { line: ': ', stack: '' } },
+    author: { l: 'Forfatter', v: (L) => L.author, pre: { line: 'af ', stack: '' } },
+    due: { l: 'Afleveringsdato', v: (L, s) => DATEFMT[s.date](L.due), pre: { line: '– afleveres ', stack: 'Afleveres senest ' } },
+    loan: { l: 'Udlånsdato', v: (L, s) => DATEFMT[s.date](L.loan), pre: { line: '– lånt ', stack: 'Lånt ' } },
+    no: { l: 'Materialenummer', v: (L) => L.no, pre: { line: '(', stack: 'Materialenr. ' }, post: { line: ')', stack: '' } },
+    branch: { l: 'Udlånt fra', v: (L) => L.branch, pre: { line: '– fra ', stack: 'Lånt på ' } }
+  };
+  const MESSAGES = [
+    ['Aflevering', 'Påmindelse før afleveringsfrist', 'Et par dage før lånene skal afleveres.'],
+    ['Aflevering', 'Første hjemkaldelse', 'Når afleveringsfristen er overskredet.'],
+    ['Reservation', 'Klar til afhentning', 'Når en reservering står klar på hylden.'],
+    ['Reservation', 'Afhentningsfrist udløber snart', 'Huskebesked før reserveringen går videre.'],
+    ['Låner', 'Velkommen som låner', 'Når en ny låner bliver oprettet.'],
+    ['Mellemværende', 'Rykker for betaling', 'Når et gebyr ikke er betalt.']
+  ];
+
+  // ---------- tilstand ----------
+  let uid = 1; const nid = () => 's' + (uid++);
+  const T = (parts, who) => ({ id: nid(), kind: 'text', parts, who: who || 'all' });
+  const S = {
+    view: 'choose', who: 'a3', sel: null,
+    subject: ['Husk at aflevere ', { w: 'w1' }],
+    secs: [
+      T(['Kære ', { f: 'name' }, ',']),
+      T(['Afleveringsfristen nærmer sig for ', { w: 'w3' }, ':']),
+      { id: nid(), kind: 'loans', who: 'all', cols: ['title', 'author', 'due'], layout: 'stack', bullet: '•', date: 2 },
+      T(['Afleverer du for sent, koster det et gebyr.'], 'adult'),
+      T(['Du kan forny ', { w: 'w1' }, ' på ', { f: 'web' }, ', hvis ingen andre venter på dem.']),
+      { id: nid(), kind: 'bye', who: 'all', text: 'Med venlig hilsen' }
+    ]
+  };
+  const ctx = () => ({ p: PEOPLE[S.who] });
+
+  // ---------- hjælpere ----------
+  function h(tag, a, ...kids) {
+    const el = document.createElement(tag);
+    if (a) for (const [k, v] of Object.entries(a)) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v; else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else if (k === 'html') el.innerHTML = v; else if (v === true) el.setAttribute(k, ''); else el.setAttribute(k, v);
+    }
+    for (const c of kids.flat(Infinity)) if (c != null && c !== false) el.append(c instanceof Node ? c : String(c));
+    return el;
+  }
+  const I = {
+    mail: '<svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="4.5" width="15" height="11" rx="2"/><path d="M3 5.5l7 5 7-5"/></svg>',
+    text: '<svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h12M4 9h12M4 13h8"/></svg>',
+    list: '<svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 5h10M7 10h10M7 15h10"/><circle cx="3.5" cy="5" r="1" fill="currentColor"/><circle cx="3.5" cy="10" r="1" fill="currentColor"/><circle cx="3.5" cy="15" r="1" fill="currentColor"/></svg>',
+    pin: '<svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 17s5-4.6 5-9a5 5 0 0 0-10 0c0 4.4 5 9 5 9z"/><circle cx="10" cy="8" r="1.8"/></svg>',
+    wave: '<svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12c2-4 4 4 6 0s4 4 6 0"/></svg>',
+    who: '<svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="7" r="3"/><path d="M4 17c1-3.5 3.5-5 6-5s5 1.5 6 5"/></svg>',
+    gear: '<svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="2.5"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4"/></svg>',
+    copy: '<svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="6" width="11" height="11" rx="2"/><path d="M3.5 13V4.5a1 1 0 0 1 1-1H13"/></svg>',
+    plus: '<svg class="ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 4v12M4 10h12"/></svg>'
+  };
+  const ic = (k) => h('span', { html: I[k], style: 'display:inline-flex' });
+  const toast = (s) => { const t = h('div', { class: 'toast', role: 'status' }, s); document.body.append(t); setTimeout(() => t.remove(), 2400); };
+  const visible = (sec) => sec.who === 'all' || (sec.who === 'adult' && !PEOPLE[S.who].child) || (sec.who === 'child' && PEOPLE[S.who].child);
+  const WHO_TXT = { all: 'Alle', adult: 'Kun voksne', child: 'Kun børn' };
+
+  // ---------- render ----------
+  const app = document.getElementById('app');
+  function render() {
+    closePop();
+    app.replaceChildren(top(), S.view === 'choose' ? choose() : work());
+  }
+  function top() {
+    return h('header', { class: 'top' },
+      h('div', { class: 'logo' }, h('div', { class: 'mark', html: I.mail }), h('div', null, h('h1', null, 'Beskedværkstedet'), h('small', null, 'Lav beskeder til Cicero uden kode'))),
+      S.view === 'work' ? h('div', { class: 'crumbs' }, h('button', { onclick: () => { S.view = 'choose'; render(); } }, 'Alle beskeder'), '›', 'Påmindelse før afleveringsfrist') : null,
+      h('span', { class: 'sp' }),
+      S.view === 'work' ? h('button', { class: 'btn primary', onclick: copyDialog }, ic('copy'), 'Kopiér til Cicero') : null);
+  }
+  function choose() {
+    return h('section', { class: 'choose' }, h('h2', null, 'Hvilken besked vil du tilpasse?'),
+      h('p', { class: 'l' }, 'Du starter med en færdig besked, som du kan rette til.'),
+      h('div', { class: 'cards' }, MESSAGES.map(([c, t, d], i) => h('button', { class: 'mcard', onclick: () => { if (i) toast('I skitsen virker kun "Påmindelse før afleveringsfrist"'); S.view = 'work'; render(); } },
+        h('span', { class: 'cat' }, c), h('h3', null, t), h('p', null, d)))));
+  }
+  function work() {
+    return h('div', { class: 'work' },
+      h('div', null,
+        h('div', { class: 'viewas' }, 'Vis beskeden som den ser ud for', h('div', { class: 'seg', role: 'group' },
+          Object.entries(PEOPLE).map(([k, p]) => h('button', { 'aria-pressed': String(S.who === k), onclick: () => { S.who = k; render(); } }, p.label)))),
+        mail()),
+      h('aside', { class: 'side' }, S.sel ? settings() : addPanel()));
+  }
+
+  // ---------- mailen ----------
+  function mail() {
+    const c = ctx();
+    const subj = h('div', { class: 'subject', contenteditable: 'true', 'aria-label': 'Emne', spellcheck: 'true' });
+    fill(subj, S.subject, c); wireText(subj, S, 'subject', true);
+    const body = h('div', { class: 'mbody' });
+    body.append(gap(0));
+    S.secs.forEach((sec, i) => { body.append(section(sec, i, c), gap(i + 1)); });
+    // slip hvor som helst i mailen: afsnittet lægges ved nærmeste mellemrum
+    const nearest = (y) => { let best = 0, bd = Infinity; body.querySelectorAll('.gap').forEach((g, k) => { const r = g.getBoundingClientRect(); const d = Math.abs(r.top + r.height / 2 - y); if (d < bd) { bd = d; best = k; } }); return best; };
+    const mark = (k) => body.querySelectorAll('.gap').forEach((g, j) => g.classList.toggle('over', j === k));
+    body.addEventListener('dragover', (e) => { e.preventDefault(); mark(nearest(e.clientY)); });
+    body.addEventListener('dragleave', (e) => { if (!body.contains(e.relatedTarget)) mark(-1); });
+    body.addEventListener('drop', (e) => {
+      e.preventDefault(); const idx = nearest(e.clientY); mark(-1); document.body.classList.remove('dragging');
+      let p; try { p = JSON.parse(e.dataTransfer.getData('text/plain')); } catch (x) { return; }
+      if (p.move) {
+        const from = S.secs.findIndex((s) => s.id === p.move); if (from < 0) return;
+        const [s] = S.secs.splice(from, 1); S.secs.splice(from < idx ? idx - 1 : idx, 0, s); render(); return;
+      }
+      if (p.kind) insertKind(p.kind, idx);
+    });
+    return h('article', { class: 'mail' },
+      h('div', { class: 'mhead' },
+        h('div', { class: 'meta' }, h('span', { class: 'av' }, 'BB'), LIB.lib, ' → ', c.p.name),
+        subj),
+      body);
+  }
+  function section(sec, i, c) {
+    const hiddenNow = !visible(sec);
+    const el = h('div', { class: 'sec' + (S.sel === sec.id ? ' sel' : '') + (hiddenNow ? ' hidden' : ''), 'data-id': sec.id });
+    if (sec.who !== 'all') el.append(h('span', { class: 'tag', title: hiddenNow ? 'Ses ikke af den valgte låner' : '' }, WHO_TXT[sec.who] + (hiddenNow ? ' · skjult her' : '')));
+    el.append(h('div', { class: 'bar' },
+      h('button', { class: 'grip', draggable: 'true', title: 'Træk for at flytte', 'aria-label': 'Flyt', ondragstart: (e) => { e.dataTransfer.setData('text/plain', JSON.stringify({ move: sec.id })); el.classList.add('dragging'); document.body.classList.add('dragging'); }, ondragend: () => { el.classList.remove('dragging'); document.body.classList.remove('dragging'); } }, '⠿ Flyt'),
+      h('button', { onclick: () => { S.sel = sec.id; render(); } }, ic('who'), WHO_TXT[sec.who]),
+      sec.kind === 'loans' ? h('button', { onclick: () => { S.sel = sec.id; render(); } }, ic('gear'), 'Indstil') : null,
+      h('button', { title: 'Fjern afsnittet', 'aria-label': 'Fjern', onclick: () => { S.secs.splice(i, 1); if (S.sel === sec.id) S.sel = null; render(); toast('Afsnittet er fjernet'); } }, '✕')));
+    if (sec.kind === 'text') {
+      const tx = h('div', { class: 'content', contenteditable: 'true', spellcheck: 'true', onfocus: () => { if (S.sel !== sec.id) { S.sel = sec.id; renderSide(); markSel(); } } });
+      fill(tx, sec.parts, c); wireText(tx, sec, 'parts', false);
+      el.append(tx);
+    } else if (sec.kind === 'loans') {
+      el.append(h('div', { class: 'mod', onclick: () => { S.sel = sec.id; render(); } },
+        h('div', { class: 'mlabel' }, ic('list'), 'Liste med lån · klik for at indstille'),
+        loansView(sec, c)));
+    } else if (sec.kind === 'bye') {
+      const tx = h('div', { class: 'content', contenteditable: 'true', oninput: (e) => { sec.text = e.target.textContent; } }, sec.text);
+      el.append(tx, h('div', { class: 'content' }, h('span', { class: 'chip', title: 'Bibliotekets navn' }, LIB.lib)));
+    } else if (sec.kind === 'contact') {
+      el.append(h('div', { class: 'mod', onclick: () => { S.sel = sec.id; render(); } }, h('div', { class: 'mlabel' }, ic('pin'), 'Kontaktoplysninger'),
+        h('div', { class: 'content' }, LIB.branch + '\n' + LIB.addr + '\nTelefon ' + LIB.phone)));
+    }
+    el.addEventListener('click', (e) => { if (!e.target.closest('.bar') && S.sel !== sec.id && sec.kind !== 'text') { S.sel = sec.id; render(); } });
+    return el;
+  }
+  function markSel() { document.querySelectorAll('.sec').forEach((x) => x.classList.toggle('sel', x.dataset.id === S.sel)); }
+  function loansView(sec, c) {
+    const box = h('div', { class: 'content loans' });
+    LOANS.slice(0, c.p.n).forEach((L, k) => {
+      const cols = sec.cols.filter((x) => COLS[x]);
+      const bullet = sec.bullet === '1.' ? (k + 1) + '. ' : sec.bullet ? sec.bullet + ' ' : '';
+      if (sec.layout === 'line') {
+        const parts = cols.map((x, j) => { const pre = j && COLS[x].pre ? COLS[x].pre.line : ''; return (j && !/^[:,]/.test(pre) ? ' ' : '') + pre + COLS[x].v(L, sec) + (COLS[x].post ? COLS[x].post.line : ''); });
+        box.append(h('div', { class: 'loan' }, bullet + parts.join('')));
+      } else {
+        const lines = cols.map((x, j) => (j ? '   ' : bullet) + (j && COLS[x].pre ? COLS[x].pre.stack : '') + COLS[x].v(L, sec));
+        box.append(h('div', { class: 'loan' }, lines.join('\n')));
+      }
+    });
+    return box;
+  }
+  function gap(idx) {
+    return h('div', { class: 'gap' }, h('button', { onclick: (e) => addMenu(e.currentTarget, idx) }, '+ Tilføj her'));
+  }
+  function insertKind(kind, idx) {
+    let s;
+    if (kind === 'text') s = T(['Skriv din tekst her.']);
+    if (kind === 'loans') s = { id: nid(), kind: 'loans', who: 'all', cols: ['title', 'due'], layout: 'line', bullet: '•', date: 0 };
+    if (kind === 'contact') s = { id: nid(), kind: 'contact', who: 'all' };
+    if (kind === 'bye') s = { id: nid(), kind: 'bye', who: 'all', text: 'Med venlig hilsen' };
+    if (kind === 'adult') s = T(['Tekst, som kun voksne ser.'], 'adult');
+    if (!s) return;
+    S.secs.splice(idx, 0, s); S.sel = s.id; render();
+  }
+
+  // tekst med felter, der viser rigtige værdier
+  function fill(el, parts, c) {
+    parts.forEach((p, k) => {
+      if (typeof p === 'string') { el.append(p); return; }
+      if (k === 0 || typeof parts[k - 1] !== 'string') el.append('​');
+      const chip = p.f ? h('span', { class: 'chip', contenteditable: 'false', title: ALL[p.f].l + ' (klik for at skifte)' }, ALL[p.f].f(c))
+        : h('span', { class: 'chip word', contenteditable: 'false', title: 'Skifter mellem "' + WORD[p.w].one + '" og "' + WORD[p.w].many + '" efter antal lån' }, c.p.n === 1 ? WORD[p.w].one : WORD[p.w].many);
+      chip._p = p;
+      chip.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); fieldMenu(chip, (np) => { Object.keys(p).forEach((x) => delete p[x]); Object.assign(p, np); render(); }, true); });
+      el.append(chip);
+      if (k === parts.length - 1) el.append('​');
+    });
+  }
+  function readParts(el) {
+    const out = []; let buf = '';
+    el.childNodes.forEach((n) => {
+      if (n.nodeType === 3) buf += n.nodeValue.replace(/​/g, '');
+      else if (n._p) { if (buf) out.push(buf); buf = ''; out.push(n._p); }
+      else if (n.tagName === 'BR') buf += '\n'; else buf += n.textContent;
+    });
+    if (buf) out.push(buf);
+    return out;
+  }
+  let lastText = null;
+  function wireText(el, obj, key, single) {
+    el.addEventListener('input', () => { obj[key] = readParts(el); });
+    el.addEventListener('focus', () => { lastText = { el, obj, key }; });
+    el.addEventListener('keyup', () => { lastText = { el, obj, key, range: getSelection().rangeCount ? getSelection().getRangeAt(0).cloneRange() : null }; });
+    el.addEventListener('mouseup', () => { lastText = { el, obj, key, range: getSelection().rangeCount ? getSelection().getRangeAt(0).cloneRange() : null }; });
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' && single) e.preventDefault(); });
+    el.addEventListener('paste', (e) => { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); });
+    el.addEventListener('drop', (e) => e.preventDefault()); // ingen tekst-indsættelse; mailen tager sig af slippet
+  }
+  function insertChipAtCaret(p) {
+    if (!lastText || !document.body.contains(lastText.el)) { toast('Klik først i teksten, hvor feltet skal stå'); return; }
+    const { el, obj, key } = lastText;
+    const chip = h('span'); chip._p = p;
+    const r = lastText.range && el.contains(lastText.range.startContainer) ? lastText.range : null;
+    if (r) { r.insertNode(chip); } else el.append(chip);
+    obj[key] = readParts(el);
+    render();
+  }
+
+  // ---------- menuer ----------
+  let pop = null;
+  function closePop() { if (pop) { pop.remove(); pop = null; document.removeEventListener('mousedown', outside); } }
+  function outside(e) { if (pop && !pop.contains(e.target)) closePop(); }
+  function place(el, anchor) {
+    const r = anchor.getBoundingClientRect();
+    document.body.append(el);
+    const w = 270, hgt = el.offsetHeight;
+    el.style.left = Math.max(12, Math.min(r.left, innerWidth - w - 12)) + 'px';
+    el.style.top = (r.bottom + 6 + hgt > innerHeight ? Math.max(12, r.top - hgt - 6) : r.bottom + 6) + 'px';
+    pop = el; setTimeout(() => document.addEventListener('mousedown', outside), 0);
+  }
+  function fieldMenu(anchor, pick, swap) {
+    closePop();
+    const c = ctx();
+    const el = h('div', { class: 'pop', role: 'menu' },
+      h('div', { class: 'h' }, swap ? 'Skift til' : 'Indsæt felt'),
+      FIELDS.map(([k, l, f]) => h('button', { onclick: () => { closePop(); pick({ f: k }); } }, l, h('small', null, f(c)))),
+      h('div', { class: 'h' }, 'Ord, der følger antallet'),
+      WORDS.map(([k, l]) => h('button', { onclick: () => { closePop(); pick({ w: k }); } }, l)),
+      h('details', null, h('summary', { style: 'cursor:pointer;padding:6px 10px;color:var(--muted);font-size:14px' }, 'Flere felter …'),
+        MORE.map(([k, l, f]) => h('button', { onclick: () => { closePop(); pick({ f: k }); } }, l, h('small', null, f(c))))));
+    place(el, anchor);
+  }
+  function addMenu(anchor, idx) {
+    closePop();
+    const el = h('div', { class: 'pop', role: 'menu' }, h('div', { class: 'h' }, 'Tilføj afsnit'),
+      [['text', 'Tekst'], ['loans', 'Liste med lån'], ['adult', 'Tekst kun til voksne'], ['contact', 'Kontaktoplysninger'], ['bye', 'Hilsen']].map(([k, l]) =>
+        h('button', { onclick: () => { closePop(); insertKind(k, idx); } }, l)));
+    place(el, anchor);
+  }
+
+  // ---------- højre side ----------
+  function renderSide() { const s = document.querySelector('.side'); if (s) s.replaceChildren(...[].concat(S.sel ? settings() : addPanel())); }
+  function addPanel() {
+    const item = (kind, sw, col, icon, title, sub) => h('div', { class: 'add', draggable: 'true', tabindex: '0', role: 'button',
+      ondragstart: (e) => { e.dataTransfer.setData('text/plain', JSON.stringify({ kind })); document.body.classList.add('dragging'); },
+      ondragend: () => document.body.classList.remove('dragging'),
+      onkeydown: (e) => { if (e.key === 'Enter') insertKind(kind, S.secs.length); },
+      ondblclick: () => insertKind(kind, S.secs.length) },
+      h('span', { class: 'sw', style: 'background:var(--' + sw + ');color:var(--' + col + ')' }, ic(icon)), h('span', null, h('b', null, title), h('small', null, sub)));
+    return [
+      h('div', { class: 'panel' }, h('h3', null, 'Tilføj til beskeden'), h('p', { class: 'sub' }, 'Træk et afsnit ind i mailen, eller klik "+ Tilføj her" mellem to afsnit.'),
+        h('div', { class: 'adds' },
+          item('text', 'muted-soft', 'ink', 'text', 'Tekst', 'Et afsnit, du selv skriver'),
+          item('loans', 'mod-soft', 'mod', 'list', 'Liste med lån', 'Vælg selv, hvad der vises'),
+          item('adult', 'who-soft', 'who', 'who', 'Tekst kun til voksne', 'Fx om gebyrer'),
+          item('contact', 'accent-soft', 'accent', 'pin', 'Kontaktoplysninger', 'Filialens adresse og telefon'),
+          item('bye', 'field-soft', 'field', 'wave', 'Hilsen', 'Med venlig hilsen og bibliotekets navn'))),
+      h('div', { class: 'panel' }, h('h3', null, 'Felter i teksten'), h('p', { class: 'sub' }, 'Klik i teksten, hvor feltet skal stå, og vælg så her.'),
+        h('button', { class: 'btn small', onclick: (e) => fieldMenu(e.currentTarget, insertChipAtCaret) }, ic('plus'), 'Indsæt felt')),
+      h('div', { class: 'note' }, 'De blå ord i mailen er felter. De viser eksempler, så du kan se, hvordan beskeden bliver. De grønne ord skifter mellem ental og flertal.')
+    ];
+  }
+  function settings() {
+    const sec = S.secs.find((s) => s.id === S.sel);
+    if (!sec) { S.sel = null; return addPanel(); }
+    const close = h('button', { class: 'btn ghost small', onclick: () => { S.sel = null; render(); } }, 'Luk');
+    const whoQ = h('div', { class: 'q' }, h('span', { class: 'l' }, 'Hvem skal se afsnittet?'),
+      h('div', { class: 'pills' }, Object.entries(WHO_TXT).map(([k, l]) => h('button', { class: 'pill', 'aria-pressed': String(sec.who === k), onclick: () => { sec.who = k; render(); } }, l))),
+      h('span', { class: 'hint' }, 'Børn er lånere under 18 år. Lånergrupper kan også bruges i den rigtige udgave.'));
+    if (sec.kind !== 'loans') {
+      return [h('div', { class: 'panel' }, h('h3', null, sec.kind === 'text' ? 'Tekstafsnit' : sec.kind === 'bye' ? 'Hilsen' : 'Kontaktoplysninger', h('span', { class: 'sp' }), close),
+        sec.kind === 'text' ? h('div', { class: 'q' }, h('span', { class: 'l' }, 'Felt i teksten'), h('button', { class: 'btn small', onclick: (e) => fieldMenu(e.currentTarget, insertChipAtCaret) }, ic('plus'), 'Indsæt felt ved markøren')) : null,
+        whoQ)];
+    }
+    // liste med lån
+    const cols = h('div', { class: 'cols' });
+    const order = sec.cols.concat(Object.keys(COLS).filter((k) => !sec.cols.includes(k)));
+    order.forEach((k, j) => {
+      const on = sec.cols.includes(k);
+      const row = h('div', { class: 'col' + (on ? ' on' : ''), draggable: on ? 'true' : null },
+        h('span', { class: 'grip', title: on ? 'Træk for at ændre rækkefølgen' : '' }, on ? '⠿' : ' '),
+        h('label', null, h('input', { type: 'checkbox', checked: on, onchange: (e) => { if (e.target.checked) sec.cols.push(k); else sec.cols = sec.cols.filter((x) => x !== k); render(); } }), COLS[k].l),
+        on ? h('button', { class: 'mv', 'aria-label': 'Flyt op', disabled: j === 0, onclick: () => { const i = sec.cols.indexOf(k); if (i > 0) { [sec.cols[i - 1], sec.cols[i]] = [sec.cols[i], sec.cols[i - 1]]; render(); } } }, '↑') : null,
+        on ? h('button', { class: 'mv', 'aria-label': 'Flyt ned', onclick: () => { const i = sec.cols.indexOf(k); if (i < sec.cols.length - 1) { [sec.cols[i + 1], sec.cols[i]] = [sec.cols[i], sec.cols[i + 1]]; render(); } } }, '↓') : null);
+      if (on) {
+        row.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', JSON.stringify({ col: k })); });
+        row.addEventListener('dragover', (e) => { e.preventDefault(); row.classList.add('drop'); });
+        row.addEventListener('dragleave', () => row.classList.remove('drop'));
+        row.addEventListener('drop', (e) => {
+          e.preventDefault(); e.stopPropagation(); row.classList.remove('drop');
+          let p; try { p = JSON.parse(e.dataTransfer.getData('text/plain')); } catch (x) { return; }
+          if (!p.col || p.col === k) return;
+          sec.cols = sec.cols.filter((x) => x !== p.col); sec.cols.splice(sec.cols.indexOf(k), 0, p.col); render();
+        });
+      }
+      cols.append(row);
+    });
+    const code = '<#list data.materialLoans as lån>\n' + (sec.bullet ? sec.bullet + ' ' : '') + sec.cols.map((k) => '${(lån.' + { title: 'record.title', author: 'record.author', due: 'loan.returnDate?date?string[…]', loan: 'loan.loanDate?date?string[…]', no: 'material.itemNumber', branch: 'material.activeBranch.name' }[k] + ')!""}').join(sec.layout === 'line' ? ' ' : '\n   ') + '\n</#list>';
+    return [h('div', { class: 'panel' },
+      h('h3', null, ic('list'), 'Liste med lån', h('span', { class: 'sp' }), close),
+      h('p', { class: 'sub' }, 'Vises én gang for hvert lån i beskeden.'),
+      h('div', { class: 'q' }, h('span', { class: 'l' }, 'Hvad skal vises for hvert lån?'), cols, h('span', { class: 'hint' }, 'Sæt flueben, og træk eller brug pilene for at ændre rækkefølgen.')),
+      h('div', { class: 'q' }, h('span', { class: 'l' }, 'Opstilling'), h('div', { class: 'pills' },
+        [['stack', 'Hver oplysning på sin linje'], ['line', 'Alt på én linje']].map(([k, l]) => h('button', { class: 'pill', 'aria-pressed': String(sec.layout === k), onclick: () => { sec.layout = k; render(); } }, l)))),
+      h('div', { class: 'q' }, h('span', { class: 'l' }, 'Tegn foran hvert lån'), h('div', { class: 'pills' },
+        [['•', '•'], ['–', '–'], ['1.', '1. 2. 3.'], ['', 'Intet']].map(([k, l]) => h('button', { class: 'pill', 'aria-pressed': String(sec.bullet === k), onclick: () => { sec.bullet = k; render(); } }, l)))),
+      sec.cols.some((k) => k === 'due' || k === 'loan') ? h('div', { class: 'q' }, h('span', { class: 'l' }, 'Datoer skrives som'), h('div', { class: 'pills' },
+        DATEFMT.map((f, k) => h('button', { class: 'pill', 'aria-pressed': String(sec.date === k), onclick: () => { sec.date = k; render(); } }, f(new Date(2026, 9, 23)))))) : null,
+      whoQ,
+      h('details', { class: 'adv' }, h('summary', null, 'Avanceret: se koden'), h('pre', null, code)))];
+  }
+
+  function copyDialog() {
+    const bg = h('div', { class: 'modal-bg', onclick: (e) => { if (e.target === bg) bg.remove(); } });
+    bg.append(h('div', { class: 'modal', role: 'dialog', 'aria-label': 'Kopiér til Cicero' },
+      h('h3', null, 'Kopieret – sæt den ind i Cicero'),
+      h('ol', null, h('li', null, 'Gå til Admin → Notifikationer i Cicero.'), h('li', null, 'Åbn "Afleveringsfrist for materialelån nærmer sig" og vælg E-mail.'), h('li', null, 'Erstat teksten med den kopierede, og tryk Forhåndsvisning.'), h('li', null, 'Ser den rigtig ud, så tryk Gem.')),
+      h('p', { style: 'margin:0;color:var(--muted);font-size:14px' }, 'I skitsen kopieres der ikke noget endnu.'),
+      h('div', null, h('button', { class: 'btn primary', onclick: () => bg.remove() }, 'Færdig'))));
+    document.body.append(bg);
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
