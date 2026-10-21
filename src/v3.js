@@ -331,7 +331,7 @@
   }
 
   // ---------- højre side ----------
-  function refreshSide() { const s = document.querySelector('.side'); if (s) s.replaceChildren(...[].concat(sidePanel())); }
+  function refreshSide() { const s = document.querySelector('.side'); if (s) s.replaceChildren(...[].concat(sidePanel()).filter(Boolean)); }
   function sidePanel() {
     if (sel && sel.part) return chipPanel();
     if (sel && sel.sec) { const s = doc().sections.find((x) => x.id === sel.sec); if (s) return s.kind === 'text' ? textPanel(s) : modPanel(s); }
@@ -463,7 +463,9 @@
     const close = () => { bg.remove(); document.removeEventListener('keydown', esc); };
     const esc = (e) => { if (e.key === 'Escape') close(); };
     const box = h('div', { class: 'modal' + (wide ? ' wide' : ''), role: 'dialog', 'aria-label': title }, h('h3', null, title));
-    bg.addEventListener('mousedown', (e) => { if (e.target === bg) close(); });
+    let downOnBg = false;
+    bg.addEventListener('mousedown', (e) => { downOnBg = e.target === bg && e.clientX < bg.clientWidth; });
+    bg.addEventListener('click', (e) => { if (downOnBg && e.target === bg) close(); downOnBg = false; });
     document.addEventListener('keydown', esc);
     build(box, close);
     bg.append(box); document.body.append(bg);
@@ -475,7 +477,7 @@
       const grid = h('div', { class: 'grid2' });
       SETTINGS_FIELDS.forEach(([k, l, ph]) => grid.append(h('label', { class: 'q' }, h('span', { class: 'l' }, l), h('input', { type: 'text', value: S.settings[k] || '', placeholder: ph, oninput: (e) => { S.settings[k] = e.target.value; save(); } }))));
       const kids = h('div', { class: 'childset' });
-      const drawKids = () => kids.replaceChildren(...childSettings(drawKids));
+      const drawKids = () => kids.replaceChildren(...childSettings(drawKids).filter(Boolean));
       drawKids();
       b.append(grid, kids, h('div', { class: 'row' }, h('button', { class: 'btn primary', onclick: () => { close(); render(); } }, 'Færdig')));
     });
@@ -515,7 +517,7 @@
         txt = KIT.ciceroData(d);
         let kid = false; try { kid = KIT.isChild(M(), T(), d, settings()); } catch (e) { /* ignore */ }
         const upd = (k, v) => { st[k] = v; draw(); };
-        body.replaceChildren(
+        body.replaceChildren(...[
           h('p', { style: 'margin:0;color:var(--muted)' }, 'Cicero viser forhåndsvisningen med nogle testdata, som man selv kan rette i. Her kan du lave nye, så du kan se beskeden for et barn, med flere lån osv. Det er de samme opdigtede data, som værkstedet bruger.'),
           h('div', { class: 'grid2' },
             h('div', { class: 'q' }, h('span', { class: 'l' }, 'Låneren'), pills([[false, 'Voksen'], [true, 'Barn']], st.child, (v) => upd('child', v)),
@@ -532,7 +534,7 @@
             h('li', null, 'Markér alle testdata, og sæt de kopierede ind i stedet.'),
             h('li', null, 'Opdatér forhåndsvisningen.')),
           h('details', { class: 'adv' }, h('summary', null, 'Se testdata (' + txt.trim().split('\n').length + ' linjer)'), h('pre', null, txt)),
-          h('div', { class: 'row' }, h('button', { class: 'btn', onclick: close }, 'Luk')));
+          h('div', { class: 'row' }, h('button', { class: 'btn', onclick: close }, 'Luk'))].filter(Boolean));
       };
       draw();
       b.append(body);
