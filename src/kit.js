@@ -19,7 +19,7 @@
     due: { l: 'Afleveringsdato', p: 'loan.returnDate', date: true, pre: { line: ' – afleveres ', stack: 'Afleveres senest ' } },
     loan: { l: 'Udlånsdato', p: 'loan.loanDate', date: true, pre: { line: ' – lånt ', stack: 'Lånt ' } },
     no: { l: 'Materialenummer', p: 'material.itemNumber', opt: true, pre: { line: ' (', stack: 'Materialenr. ' }, post: { line: ')', stack: '' } },
-    per: { l: 'Periodikanummer', p: 'material.periodicalName', opt: true, pre: { line: ', ', stack: 'Nummer ' } }
+    per: { l: 'Tidsskriftets nummer', p: 'material.periodicalName', opt: true, pre: { line: ', ', stack: '' } }
   };
   const LOANER_ITEMS = {
     name: { l: 'Navn', lab: 'Navn' },
@@ -46,15 +46,15 @@
       list: { path: 'data.materialLoans', as: 'lån', one: 'lånet', many: 'lånene', label: 'Liste med lån', cols: LOAN_COLS },
       personas: [
         { id: 'v1', label: 'Voksen, 1 lån', o: { count: 1 } },
-        { id: 'v3', label: 'Voksen, 3 lån', o: { count: 3 } },
-        { id: 'b2', label: 'Barn, 2 lån', o: { count: 2, child: true, groups: ['Børn'] }, name: 'Emil Lund' }
+        { id: 'v3', label: 'Voksen, 3 lån', sub: 'heraf ét tidsskrift', o: { count: 3, periodical: [1] } },
+        { id: 'b2', label: 'Barn, 2 lån', o: { count: 2, child: true }, name: 'Emil Lund' }
       ],
       starter: () => ({
         subject: ['Husk at aflevere ', { c: 'word', one: 'dit lån', many: 'dine lån' }],
         sections: [
           sec('text', { parts: ['Kære ', { c: 'name', first: true, last: true }, ','] }),
           sec('text', { parts: ['Afleveringsfristen nærmer sig for ', { c: 'word', one: 'dette lån', many: 'disse lån' }, ':'] }),
-          sec('list', { cols: ['title', 'author', 'due'], layout: 'stack', bullet: '•', date: 2, gap: true }),
+          sec('list', { cols: ['title', 'per', 'author', 'due'], layout: 'stack', bullet: '•', date: 2, gap: true }),
           sec('text', { parts: ['Afleverer du for sent, koster det et gebyr.'], who: 'adult' }),
           sec('text', { parts: ['Du kan forny ', { c: 'word', one: 'lånet', many: 'lånene' }, ' på ', { c: 'fixed', key: 'web' }, ', hvis ingen andre venter på ', { c: 'word', one: 'det', many: 'dem' }, '.'] }),
           sec('text', { parts: ['Med venlig hilsen\n', { c: 'lib' }] })
@@ -141,9 +141,61 @@
     return out;
   }
 
-  function whoCond(who, cx) {
-    if (who === 'adult') return { k: 'age', op: 'atleast', years: 18 };
-    if (who === 'child') return { k: 'age', op: 'under', years: 18 };
+  // ---------- børnelånere ----------
+  // Hvem regnes som barn? Styres af opsætningen. Alle andre regnes som voksne, også når data mangler.
+  const CHILD_DEFAULT = { age: true, group: false, groups: 'Børn', mode: 'agefirst' };
+  const CHILD_MODES = {
+    agefirst: ['Alder først, ellers lånergruppe', 'Fødselsdatoen bruges, når den findes. Mangler den, ser vi på lånergruppen.'],
+    any: ['Én af dem er nok', 'Låneren er barn, hvis enten alderen eller lånergruppen siger det.'],
+    all: ['Begge skal passe', 'Låneren er kun barn, hvis både alderen og lånergruppen siger det.']
+  };
+  function childRule(settings) {
+    const c = Object.assign({}, CHILD_DEFAULT, (settings && settings.child) || {});
+    c.names = String(c.groups || '').split(',').map((x) => x.trim()).filter(Boolean);
+    if (!c.names.length) c.group = false;
+    if (!c.age && !c.group) c.age = true;
+    if (!CHILD_MODES[c.mode]) c.mode = 'agefirst';
+    return c;
+  }
+  const quote = (s) => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+  function childRuleText(settings) {
+    const c = childRule(settings);
+    const g = 'lånergruppen starter med ' + c.names.map((n) => '"' + n + '"').join(' eller ');
+    if (c.age && !c.group) return 'Børn er lånere under 18 år, regnet ud fra fødselsdatoen den dag, beskeden sendes.';
+    if (!c.age) return 'Børn er lånere, hvor ' + g + '.';
+    if (c.mode === 'any') return 'Børn er lånere under 18 år, eller hvor ' + g + '.';
+    if (c.mode === 'all') return 'Børn er lånere under 18 år, hvor ' + g + '.';
+    return 'Børn er lånere under 18 år. Mangler fødselsdatoen, er det dem, hvor ' + g + '.';
+  }
+  // FreeMarker-linjer, der sætter variablen erBarn
+  function childCode(cx, settings) {
+    const c = childRule(settings);
+    const L = cx.loaner;
+    const dob = (cx.P && cx.P.dob) || L + '.dateOfBirth';
+    const groups = (cx.P && cx.P.groups) || L + '.loanerGroups';
+    const has = '(' + dob + ')??';
+    // ">" skal stå i parentes, ellers lukker det FreeMarker-mærket
+    const young = '((' + dob + ')?date?string("yyyyMMdd")?number + 180000 > .now?date?string("yyyyMMdd")?number)';
+    const lines = ['<#-- Hvem er børnelånere? ' + childRuleText(settings).replace(/-->/g, '- ->') + ' Alle andre regnes som voksne. -->'];
+    const gflag = c.age ? 'erBarnGruppe' : 'erBarn';
+    if (c.group) {
+      const test = c.names.map((n) => '(g.loanerGroupName!"")?lower_case?starts_with(' + quote(n.toLowerCase()) + ')').join(' || ');
+      lines.push('<#assign ' + gflag + ' = false />');
+      lines.push('<#list (' + groups + ')![] as g><#if ' + test + '><#assign ' + gflag + ' = true /></#if></#list>');
+    }
+    if (c.age) {
+      let e;
+      if (!c.group) e = has + ' && ' + young;
+      else if (c.mode === 'any') e = '(' + has + ' && ' + young + ') || erBarnGruppe';
+      else if (c.mode === 'all') e = has + ' && ' + young + ' && erBarnGruppe';
+      else e = '(' + has + ' && ' + young + ') || (!' + has + ' && erBarnGruppe)';
+      lines.push('<#assign erBarn = ' + e + ' />');
+    }
+    return lines.map((code) => ({ t: 'code', code }));
+  }
+  function whoCond(who) {
+    if (who === 'adult') return { k: 'raw', code: '!erBarn' };
+    if (who === 'child') return { k: 'raw', code: 'erBarn' };
     return null;
   }
 
@@ -244,14 +296,15 @@
       const last = i === secs.length - 1;
       const endsNl = s.kind === 'list';
       if (!last) nodes = nodes.concat([T(endsNl ? '\n' : '\n\n')]);
-      const c = whoCond(s.who, cx);
+      const c = whoCond(s.who);
       if (c) body.push(IF(c, nodes)); else body.push(...nodes);
     });
+    const usesWho = secs.some((s) => whoCond(s.who));
     body.push(T('\n'));
     const p = protocol || 'EMAIL';
     return {
       v: 1, typeId: type.id, ftlType: null, protocol: p,
-      format: p === 'DIGITAL_POST' ? 'html-frame' : 'text', prelude: [], notes: [],
+      format: p === 'DIGITAL_POST' ? 'html-frame' : 'text', prelude: usesWho ? childCode(cx, settings) : [], notes: [],
       variants: [{ id: 'v', cond: null, subject: partsNodes(doc.subject, cx, settings), body: mergeText(body) }]
     };
   }
@@ -272,17 +325,49 @@
   }
 
   // ---------- testdata ----------
-  function personaData(msgDef, type, persona, settings, protocol) {
-    const o = Object.assign({ libraryName: (settings && settings.name) || '', protocol: protocol || 'EMAIL' }, persona.o || {});
+  function personaData(msgDef, type, persona, settings, protocol, extra) {
+    const rule = childRule(settings);
+    const o = Object.assign({ libraryName: (settings && settings.name) || '', protocol: protocol || 'EMAIL' }, persona.o || {}, extra || {});
+    o.groups = o.child ? [rule.names[0] || 'Børn'] : ['Voksne'];
     const d = CAT.buildData(type, o);
     const ln = d.loaner || d.loanerModel;
-    if (persona.name && ln) ln.name = persona.name;
-    if (persona.adult18 && ln) { const b = new Date(); b.setFullYear(b.getFullYear() - 18); b.setDate(b.getDate() - 2); ln.dateOfBirth = b; }
+    if (ln && (persona.name || o.child)) ln.name = persona.name || 'Emil Lund';
+    if (persona.adult18 && ln && !o.child) { const b = new Date(); b.setFullYear(b.getFullYear() - 18); b.setDate(b.getDate() - 2); b.setHours(12, 0, 0, 0); ln.dateOfBirth = b; }
     if (persona.patch) persona.patch(d);
+    if (ln && o.noPhone) { delete ln.phoneNumber; delete ln.email; delete ln.phoneNumbers; delete ln.emails; }
+    if (ln && o.noDob) delete ln.dateOfBirth;
     return d;
   }
+  // regnes låneren i disse data som barn? (samme kode, som skabelonen bruger)
+  function isChild(msgDef, type, data, settings) {
+    const cx = ctxOf(msgDef, type);
+    const nodes = childCode(cx, settings).concat([IF({ k: 'raw', code: 'erBarn' }, [T('1')], [T('0')])]);
+    return FTL.render(snippet(nodes, type), data).trim() === '1';
+  }
 
-  const api = { MESSAGES, LOAN_COLS, LOANER_ITEMS, CONTACT_ITEMS, DATE_FORMATS, newSection, sectionBody, chipNodes, partsNodes, whoCond, toModel, snippet, personaData, ctxOf, nid };
+  // ---------- testdata i Ciceros format (felt=værdi pr. linje) ----------
+  function ciceroData(data) {
+    const lines = [];
+    const fmt = (v) => {
+      if (v instanceof Date) return FTL.formatDate(v, 'd. MMMM yyyy', 'da');
+      if (typeof v === 'number') return String(v).replace(/\.0+$/, '');
+      return String(v);
+    };
+    (function walk(v, path) {
+      if (v == null) return;
+      if (Array.isArray(v)) {
+        // åbningstider: hele ugen kun for lånerens filial, ellers kun første dag (som i Ciceros egne testdata)
+        if (/openingHours$/.test(path) && !/^data\.loaner\.branch\./.test(path)) v = v.slice(0, 1);
+        v.forEach((x, i) => walk(x, path + '[' + i + ']')); return;
+      }
+      if (typeof v === 'object' && !(v instanceof Date)) { Object.keys(v).sort().forEach((k) => walk(v[k], path + '.' + k)); return; }
+      if (typeof v === 'string' && /^‹.*›$/.test(v)) return;
+      lines.push(path + '=' + fmt(v).replace(/\r?\n/g, ' '));
+    })(data, 'data');
+    return lines.join('\n') + '\n';
+  }
+
+  const api = { CHILD_DEFAULT, CHILD_MODES, childRule, childRuleText, childCode, isChild, ciceroData, MESSAGES, LOAN_COLS, LOANER_ITEMS, CONTACT_ITEMS, DATE_FORMATS, newSection, sectionBody, chipNodes, partsNodes, whoCond, toModel, snippet, personaData, ctxOf, nid };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.KIT = api;
 })(typeof window !== 'undefined' ? window : globalThis);

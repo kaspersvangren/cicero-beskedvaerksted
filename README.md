@@ -16,7 +16,7 @@ Editoren taler ikke med Cicero. Den laver kun tekst, og alt gemmes i den browser
 
 | Fil | Hvad |
 |---|---|
-| `index.html` | Beskedværkstedet v0.3 i én fil (bygget) |
+| `index.html` | Beskedværkstedet v0.4 i én fil (bygget) |
 | `v2/index.html` | Den avancerede editor v0.2 (bygget) |
 | `src/kit.js` | Byggesættet: beskeder, afsnit og brikker med valg, omsat til motorens model |
 | `src/v3.js`, `src/v3.css` | Brugerfladen til v0.3 |
@@ -45,3 +45,4 @@ node test/run_kit.js        # byggesættets beskeder for alle testlånere og pro
 - **v0.1**: første udgave.
 - **v0.2**: egne feltnavne og opdigtede testdata i stedet for Systematics beskrivelser og eksempler.
 - **v0.3**: byggesæt med motoren under. To beskeder: påmindelse før afleveringsfrist og låner er ikke længere mindreårig. Brikker med valg (fornavn/efternavn, lånerens oplysninger, kontaktoplysninger fra filialen eller opsætningen, liste med lån), afsnit til alle/voksne/børn og opsætning af bibliotekets faste oplysninger. v0.2 er flyttet til /v2/.
+- **v0.4**: opsætning af, hvem der er børnelånere (alder, lånergruppe eller begge – fx alder først, ellers lånergruppe). Alle andre regnes som voksne, også når data mangler. Tidsskrift blandt testlånernes lån. Testdata til Cicero: lav data i Ciceros format til forhåndsvisningen (barn/voksen, antal lån, tidsskrift, manglende oplysninger).

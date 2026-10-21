@@ -174,6 +174,20 @@ body.dragging .gap { height: 18px; }
 .flist small { color: var(--muted); font-size: 13px; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 10px; z-index: 70; font-size: 15px; max-width: calc(100% - 32px); }
 
+/* v0.4: børnelånere og testdata */
+.childset { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
+.childset h4 { margin: 0; font: 600 17px var(--f-head); }
+.childset .sub { margin: -4px 0 2px; font-size: 14px; color: var(--muted); }
+.q.indent { margin-left: 28px; }
+.radios { display: grid; gap: 6px; }
+.radio { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+.radio.on { border-color: var(--accent); background: var(--accent-soft, var(--muted-soft)); }
+.radio input { margin-top: 3px; accent-color: var(--accent); }
+.radio b { display: block; font-weight: 600; }
+.radio small { display: block; color: var(--muted); font-size: 13.5px; }
+.checks { display: grid; gap: 8px; }
+.viewas .btn.small { margin-left: auto; }
+
 </style>
 </head>
 <body>
@@ -1321,8 +1335,9 @@ body.dragging .gap { height: 18px; }
       if (/^(preferredLanguage|loanerPreferredLanguage)$/.test(n)) return o.lang;
       if (n === 'dateOfBirth') return o.child ? addDays(o.now, -9 * 365 - 40) : new Date(1985, 2, 15, 12);
       if (n === 'isUnderage') return !!o.child;
-      if (n === 'periodical') return !!o.periodical;
-      if (n === 'periodicalName' || n === 'periodicalInfo') return o.periodical ? 'Nr. 6, 2026' : undefined;
+      const isPer = Array.isArray(o.periodical) ? o.periodical.includes(ctx && ctx.list ? ctx.idx : 0) : !!o.periodical;
+      if (n === 'periodical') return isPer;
+      if (n === 'periodicalName' || n === 'periodicalInfo') return isPer ? 'Nr. 8, 2026' : undefined;
       if (n === 'absenceFrom' || n === 'absenceTo') return undefined;
       if (n === 'protocol') return o.protocol;
       if (ctx && ctx.groups) {
@@ -1343,8 +1358,8 @@ body.dragging .gap { height: 18px; }
         if (n === 'serviceHoursEndTime') return closed ? '' : (day >= 5 ? '14:00' : '17:00');
       }
       const idx = ctx && ctx.list ? ctx.idx : 0;
-      if (n === 'title') return par === 'customNotification' ? 'Ændrede åbningstider' : TITLES[idx % TITLES.length];
-      if (n === 'author') return AUTHORS[idx % AUTHORS.length];
+      if (n === 'title') return par === 'customNotification' ? 'Ændrede åbningstider' : isPer && Array.isArray(o.periodical) ? 'Læsehesten' : TITLES[idx % TITLES.length];
+      if (n === 'author') return isPer && Array.isArray(o.periodical) ? '' : AUTHORS[idx % AUTHORS.length];
       if (n === 'classification') return CLASSES[idx % CLASSES.length];
       if (n === 'itemNumber' || n === 'materialNumber' || n === 'barcode') return String(5163870 + idx * 4711);
       if (n === 'reservationPickupInformation' || n === 'reservationPickupInformationr') return String(3 + idx * 14);
@@ -2052,7 +2067,7 @@ body.dragging .gap { height: 18px; }
     due: { l: 'Afleveringsdato', p: 'loan.returnDate', date: true, pre: { line: ' – afleveres ', stack: 'Afleveres senest ' } },
     loan: { l: 'Udlånsdato', p: 'loan.loanDate', date: true, pre: { line: ' – lånt ', stack: 'Lånt ' } },
     no: { l: 'Materialenummer', p: 'material.itemNumber', opt: true, pre: { line: ' (', stack: 'Materialenr. ' }, post: { line: ')', stack: '' } },
-    per: { l: 'Periodikanummer', p: 'material.periodicalName', opt: true, pre: { line: ', ', stack: 'Nummer ' } }
+    per: { l: 'Tidsskriftets nummer', p: 'material.periodicalName', opt: true, pre: { line: ', ', stack: '' } }
   };
   const LOANER_ITEMS = {
     name: { l: 'Navn', lab: 'Navn' },
@@ -2079,15 +2094,15 @@ body.dragging .gap { height: 18px; }
       list: { path: 'data.materialLoans', as: 'lån', one: 'lånet', many: 'lånene', label: 'Liste med lån', cols: LOAN_COLS },
       personas: [
         { id: 'v1', label: 'Voksen, 1 lån', o: { count: 1 } },
-        { id: 'v3', label: 'Voksen, 3 lån', o: { count: 3 } },
-        { id: 'b2', label: 'Barn, 2 lån', o: { count: 2, child: true, groups: ['Børn'] }, name: 'Emil Lund' }
+        { id: 'v3', label: 'Voksen, 3 lån', sub: 'heraf ét tidsskrift', o: { count: 3, periodical: [1] } },
+        { id: 'b2', label: 'Barn, 2 lån', o: { count: 2, child: true }, name: 'Emil Lund' }
       ],
       starter: () => ({
         subject: ['Husk at aflevere ', { c: 'word', one: 'dit lån', many: 'dine lån' }],
         sections: [
           sec('text', { parts: ['Kære ', { c: 'name', first: true, last: true }, ','] }),
           sec('text', { parts: ['Afleveringsfristen nærmer sig for ', { c: 'word', one: 'dette lån', many: 'disse lån' }, ':'] }),
-          sec('list', { cols: ['title', 'author', 'due'], layout: 'stack', bullet: '•', date: 2, gap: true }),
+          sec('list', { cols: ['title', 'per', 'author', 'due'], layout: 'stack', bullet: '•', date: 2, gap: true }),
           sec('text', { parts: ['Afleverer du for sent, koster det et gebyr.'], who: 'adult' }),
           sec('text', { parts: ['Du kan forny ', { c: 'word', one: 'lånet', many: 'lånene' }, ' på ', { c: 'fixed', key: 'web' }, ', hvis ingen andre venter på ', { c: 'word', one: 'det', many: 'dem' }, '.'] }),
           sec('text', { parts: ['Med venlig hilsen\n', { c: 'lib' }] })
@@ -2174,9 +2189,61 @@ body.dragging .gap { height: 18px; }
     return out;
   }
 
-  function whoCond(who, cx) {
-    if (who === 'adult') return { k: 'age', op: 'atleast', years: 18 };
-    if (who === 'child') return { k: 'age', op: 'under', years: 18 };
+  // ---------- børnelånere ----------
+  // Hvem regnes som barn? Styres af opsætningen. Alle andre regnes som voksne, også når data mangler.
+  const CHILD_DEFAULT = { age: true, group: false, groups: 'Børn', mode: 'agefirst' };
+  const CHILD_MODES = {
+    agefirst: ['Alder først, ellers lånergruppe', 'Fødselsdatoen bruges, når den findes. Mangler den, ser vi på lånergruppen.'],
+    any: ['Én af dem er nok', 'Låneren er barn, hvis enten alderen eller lånergruppen siger det.'],
+    all: ['Begge skal passe', 'Låneren er kun barn, hvis både alderen og lånergruppen siger det.']
+  };
+  function childRule(settings) {
+    const c = Object.assign({}, CHILD_DEFAULT, (settings && settings.child) || {});
+    c.names = String(c.groups || '').split(',').map((x) => x.trim()).filter(Boolean);
+    if (!c.names.length) c.group = false;
+    if (!c.age && !c.group) c.age = true;
+    if (!CHILD_MODES[c.mode]) c.mode = 'agefirst';
+    return c;
+  }
+  const quote = (s) => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+  function childRuleText(settings) {
+    const c = childRule(settings);
+    const g = 'lånergruppen starter med ' + c.names.map((n) => '"' + n + '"').join(' eller ');
+    if (c.age && !c.group) return 'Børn er lånere under 18 år, regnet ud fra fødselsdatoen den dag, beskeden sendes.';
+    if (!c.age) return 'Børn er lånere, hvor ' + g + '.';
+    if (c.mode === 'any') return 'Børn er lånere under 18 år, eller hvor ' + g + '.';
+    if (c.mode === 'all') return 'Børn er lånere under 18 år, hvor ' + g + '.';
+    return 'Børn er lånere under 18 år. Mangler fødselsdatoen, er det dem, hvor ' + g + '.';
+  }
+  // FreeMarker-linjer, der sætter variablen erBarn
+  function childCode(cx, settings) {
+    const c = childRule(settings);
+    const L = cx.loaner;
+    const dob = (cx.P && cx.P.dob) || L + '.dateOfBirth';
+    const groups = (cx.P && cx.P.groups) || L + '.loanerGroups';
+    const has = '(' + dob + ')??';
+    // ">" skal stå i parentes, ellers lukker det FreeMarker-mærket
+    const young = '((' + dob + ')?date?string("yyyyMMdd")?number + 180000 > .now?date?string("yyyyMMdd")?number)';
+    const lines = ['<#-- Hvem er børnelånere? ' + childRuleText(settings).replace(/-->/g, '- ->') + ' Alle andre regnes som voksne. -->'];
+    const gflag = c.age ? 'erBarnGruppe' : 'erBarn';
+    if (c.group) {
+      const test = c.names.map((n) => '(g.loanerGroupName!"")?lower_case?starts_with(' + quote(n.toLowerCase()) + ')').join(' || ');
+      lines.push('<#assign ' + gflag + ' = false />');
+      lines.push('<#list (' + groups + ')![] as g><#if ' + test + '><#assign ' + gflag + ' = true /></#if></#list>');
+    }
+    if (c.age) {
+      let e;
+      if (!c.group) e = has + ' && ' + young;
+      else if (c.mode === 'any') e = '(' + has + ' && ' + young + ') || erBarnGruppe';
+      else if (c.mode === 'all') e = has + ' && ' + young + ' && erBarnGruppe';
+      else e = '(' + has + ' && ' + young + ') || (!' + has + ' && erBarnGruppe)';
+      lines.push('<#assign erBarn = ' + e + ' />');
+    }
+    return lines.map((code) => ({ t: 'code', code }));
+  }
+  function whoCond(who) {
+    if (who === 'adult') return { k: 'raw', code: '!erBarn' };
+    if (who === 'child') return { k: 'raw', code: 'erBarn' };
     return null;
   }
 
@@ -2277,14 +2344,15 @@ body.dragging .gap { height: 18px; }
       const last = i === secs.length - 1;
       const endsNl = s.kind === 'list';
       if (!last) nodes = nodes.concat([T(endsNl ? '\n' : '\n\n')]);
-      const c = whoCond(s.who, cx);
+      const c = whoCond(s.who);
       if (c) body.push(IF(c, nodes)); else body.push(...nodes);
     });
+    const usesWho = secs.some((s) => whoCond(s.who));
     body.push(T('\n'));
     const p = protocol || 'EMAIL';
     return {
       v: 1, typeId: type.id, ftlType: null, protocol: p,
-      format: p === 'DIGITAL_POST' ? 'html-frame' : 'text', prelude: [], notes: [],
+      format: p === 'DIGITAL_POST' ? 'html-frame' : 'text', prelude: usesWho ? childCode(cx, settings) : [], notes: [],
       variants: [{ id: 'v', cond: null, subject: partsNodes(doc.subject, cx, settings), body: mergeText(body) }]
     };
   }
@@ -2305,36 +2373,68 @@ body.dragging .gap { height: 18px; }
   }
 
   // ---------- testdata ----------
-  function personaData(msgDef, type, persona, settings, protocol) {
-    const o = Object.assign({ libraryName: (settings && settings.name) || '', protocol: protocol || 'EMAIL' }, persona.o || {});
+  function personaData(msgDef, type, persona, settings, protocol, extra) {
+    const rule = childRule(settings);
+    const o = Object.assign({ libraryName: (settings && settings.name) || '', protocol: protocol || 'EMAIL' }, persona.o || {}, extra || {});
+    o.groups = o.child ? [rule.names[0] || 'Børn'] : ['Voksne'];
     const d = CAT.buildData(type, o);
     const ln = d.loaner || d.loanerModel;
-    if (persona.name && ln) ln.name = persona.name;
-    if (persona.adult18 && ln) { const b = new Date(); b.setFullYear(b.getFullYear() - 18); b.setDate(b.getDate() - 2); ln.dateOfBirth = b; }
+    if (ln && (persona.name || o.child)) ln.name = persona.name || 'Emil Lund';
+    if (persona.adult18 && ln && !o.child) { const b = new Date(); b.setFullYear(b.getFullYear() - 18); b.setDate(b.getDate() - 2); b.setHours(12, 0, 0, 0); ln.dateOfBirth = b; }
     if (persona.patch) persona.patch(d);
+    if (ln && o.noPhone) { delete ln.phoneNumber; delete ln.email; delete ln.phoneNumbers; delete ln.emails; }
+    if (ln && o.noDob) delete ln.dateOfBirth;
     return d;
   }
+  // regnes låneren i disse data som barn? (samme kode, som skabelonen bruger)
+  function isChild(msgDef, type, data, settings) {
+    const cx = ctxOf(msgDef, type);
+    const nodes = childCode(cx, settings).concat([IF({ k: 'raw', code: 'erBarn' }, [T('1')], [T('0')])]);
+    return FTL.render(snippet(nodes, type), data).trim() === '1';
+  }
 
-  const api = { MESSAGES, LOAN_COLS, LOANER_ITEMS, CONTACT_ITEMS, DATE_FORMATS, newSection, sectionBody, chipNodes, partsNodes, whoCond, toModel, snippet, personaData, ctxOf, nid };
+  // ---------- testdata i Ciceros format (felt=værdi pr. linje) ----------
+  function ciceroData(data) {
+    const lines = [];
+    const fmt = (v) => {
+      if (v instanceof Date) return FTL.formatDate(v, 'd. MMMM yyyy', 'da');
+      if (typeof v === 'number') return String(v).replace(/\.0+$/, '');
+      return String(v);
+    };
+    (function walk(v, path) {
+      if (v == null) return;
+      if (Array.isArray(v)) {
+        // åbningstider: hele ugen kun for lånerens filial, ellers kun første dag (som i Ciceros egne testdata)
+        if (/openingHours$/.test(path) && !/^data\.loaner\.branch\./.test(path)) v = v.slice(0, 1);
+        v.forEach((x, i) => walk(x, path + '[' + i + ']')); return;
+      }
+      if (typeof v === 'object' && !(v instanceof Date)) { Object.keys(v).sort().forEach((k) => walk(v[k], path + '.' + k)); return; }
+      if (typeof v === 'string' && /^‹.*›$/.test(v)) return;
+      lines.push(path + '=' + fmt(v).replace(/\r?\n/g, ' '));
+    })(data, 'data');
+    return lines.join('\n') + '\n';
+  }
+
+  const api = { CHILD_DEFAULT, CHILD_MODES, childRule, childRuleText, childCode, isChild, ciceroData, MESSAGES, LOAN_COLS, LOANER_ITEMS, CONTACT_ITEMS, DATE_FORMATS, newSection, sectionBody, chipNodes, partsNodes, whoCond, toModel, snippet, personaData, ctxOf, nid };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.KIT = api;
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
 <script>
-/* Beskedværkstedet v0.3 – byggesæt med motoren under. Kræver FTL, CAT, MODEL, KIT og window.CATALOG_RAW. */
+/* Beskedværkstedet v0.4 – byggesæt med motoren under. Kræver FTL, CAT, MODEL, KIT og window.CATALOG_RAW. */
 (function () {
   'use strict';
-  const VERSION = 'v0.3';
+  const VERSION = 'v0.4';
   const CATALOG = CAT.load(window.CATALOG_RAW);
   const STORE = 'beskedvaerksted.v3';
   const WHO = { all: 'Alle', adult: 'Kun voksne', child: 'Kun børn' };
   const SETTINGS_FIELDS = [['name', 'Bibliotekets navn', 'Fx Gladsaxe Bibliotekerne'], ['address', 'Adresse', 'Fx Søborg Hovedgade 220, 2860 Søborg'], ['phone', 'Telefon', 'Fx 39 57 00 00'], ['email', 'E-mail', 'Fx bibliotek@kommune.dk'], ['web', 'Hjemmeside', 'Fx bibliotek.dk'], ['note', 'Fri tekst, fx åbningstider', 'Fx Åbent alle dage 7–22']];
 
   // ---------- tilstand ----------
-  const defaults = () => ({ settings: { name: '', address: '', phone: '', email: '', web: '', note: '' }, docs: {}, protocol: 'EMAIL', persona: {}, msgId: null });
+  const defaults = () => ({ settings: { name: '', address: '', phone: '', email: '', web: '', note: '', child: Object.assign({}, KIT.CHILD_DEFAULT) }, docs: {}, protocol: 'EMAIL', persona: {}, msgId: null });
   let S = defaults();
-  try { const raw = localStorage.getItem(STORE); if (raw) { const d = JSON.parse(raw); S = Object.assign(defaults(), d); S.settings = Object.assign(defaults().settings, d.settings || {}); } } catch (e) { /* ingen lagring */ }
+  try { const raw = localStorage.getItem(STORE); if (raw) { const d = JSON.parse(raw); S = Object.assign(defaults(), d); S.settings = Object.assign(defaults().settings, d.settings || {}); S.settings.child = Object.assign({}, KIT.CHILD_DEFAULT, S.settings.child || {}); } } catch (e) { /* ingen lagring */ }
   let view = S.msgId ? 'work' : 'choose';
   let sel = null; // { sec } eller { sec, part } eller { subject: true, part }
   let undoStack = [];
@@ -2383,11 +2483,12 @@ body.dragging .gap { height: 18px; }
   }
   const cx = () => KIT.ctxOf(M(), T());
   function chipValue(p) { const r = renderNodes(KIT.chipNodes(p, cx(), settings())); return r.err ? '⚠' : r.out; }
+  let CHILD = null;
+  function isChildNow() { if (CHILD == null) { try { CHILD = KIT.isChild(M(), T(), data(), settings()); } catch (e) { CHILD = false; } } return CHILD; }
   function isVisible(s) {
-    const c = KIT.whoCond(s.who, cx());
-    if (!c) return true;
-    const r = renderNodes([{ t: 'if', branches: [{ cond: c, body: [{ t: 'text', v: '1' }] }], else: [{ t: 'text', v: '0' }] }]);
-    return r.out === '1';
+    if (s.who === 'adult') return !isChildNow();
+    if (s.who === 'child') return isChildNow();
+    return true;
   }
   function chipLabel(p) {
     switch (p.c) {
@@ -2405,7 +2506,7 @@ body.dragging .gap { height: 18px; }
   const app = document.getElementById('app');
   function render() {
     closePop();
-    DATA = null;
+    DATA = null; CHILD = null;
     app.replaceChildren(top(), view === 'choose' ? choose() : work());
   }
   function top() {
@@ -2434,7 +2535,8 @@ body.dragging .gap { height: 18px; }
       h('div', { class: 'titlerow' }, h('button', { class: 'back', onclick: () => { view = 'choose'; sel = null; render(); } }, '← Alle beskeder'), h('h2', null, M().title)),
       h('div', null,
         h('div', { class: 'viewas' }, 'Vis beskeden, som den ser ud for', h('div', { class: 'seg', role: 'group' },
-          M().personas.map((p) => h('button', { 'aria-pressed': String(persona().id === p.id), onclick: () => { S.persona[S.msgId] = p.id; save(); render(); } }, p.label)))),
+          M().personas.map((p) => h('button', { 'aria-pressed': String(persona().id === p.id), title: p.sub || null, onclick: () => { S.persona[S.msgId] = p.id; save(); render(); } }, p.label))),
+          h('button', { class: 'btn ghost small', onclick: testDataDialog, title: 'Lav testdata, så du kan se beskeden for et barn, med flere lån osv. i Ciceros forhåndsvisning' }, 'Testdata til Cicero')),
         mail()),
       h('aside', { class: 'side' }, sidePanel()));
   }
@@ -2679,7 +2781,7 @@ body.dragging .gap { height: 18px; }
   function whoQ(s) {
     return h('div', { class: 'q' }, h('span', { class: 'l' }, 'Hvem skal se afsnittet?'),
       h('div', { class: 'pills' }, Object.entries(WHO).map(([k, l]) => h('button', { class: 'pill', 'aria-pressed': String(s.who === k), onclick: () => { snapshot(); s.who = k; save(); render(); } }, l))),
-      h('span', { class: 'hint' }, 'Børn er lånere under 18 år, regnet ud fra fødselsdatoen den dag, beskeden sendes.'));
+      h('span', { class: 'hint' }, KIT.childRuleText(settings()), ' ', h('a', { href: '#', onclick: (e) => { e.preventDefault(); openSettings(); } }, 'Ret i Opsætning')));
   }
   function textPanel(s) {
     return [h('div', { class: 'panel' }, h('h3', null, ic('text'), 'Tekstafsnit', h('span', { class: 'sp' }), closeBtn()),
@@ -2796,8 +2898,73 @@ body.dragging .gap { height: 18px; }
       b.append(h('p', { style: 'margin:0;color:var(--muted)' }, 'Bibliotekets faste oplysninger. De bruges i "Kontaktoplysninger" og i felter som hjemmeside og telefon. De gemmes kun i denne browser.'));
       const grid = h('div', { class: 'grid2' });
       SETTINGS_FIELDS.forEach(([k, l, ph]) => grid.append(h('label', { class: 'q' }, h('span', { class: 'l' }, l), h('input', { type: 'text', value: S.settings[k] || '', placeholder: ph, oninput: (e) => { S.settings[k] = e.target.value; save(); } }))));
-      b.append(grid, h('div', { class: 'row' }, h('button', { class: 'btn primary', onclick: () => { close(); render(); } }, 'Færdig')));
+      const kids = h('div', { class: 'childset' });
+      const drawKids = () => kids.replaceChildren(...childSettings(drawKids));
+      drawKids();
+      b.append(grid, kids, h('div', { class: 'row' }, h('button', { class: 'btn primary', onclick: () => { close(); render(); } }, 'Færdig')));
     });
+  }
+  function childSettings(redraw) {
+    const c = S.settings.child;
+    const set = (k, v) => { c[k] = v; if (!c.age && !c.group) c[k === 'age' ? 'group' : 'age'] = true; save(); redraw(); };
+    const both = c.age && c.group;
+    return [
+      h('h4', null, 'Hvem er børnelånere?'),
+      h('p', { class: 'sub' }, 'Bruges i afsnit, der kun skal ses af børn eller kun af voksne. Alle, der ikke er børn, regnes som voksne, også hvis oplysningen mangler.'),
+      h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: !!c.age, onchange: (e) => set('age', e.target.checked) }), 'Alder: under 18 år, ud fra fødselsdatoen'),
+      h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: !!c.group, onchange: (e) => set('group', e.target.checked) }), 'Lånergruppe: navnet starter med …'),
+      c.group ? h('label', { class: 'q indent' }, h('input', { type: 'text', value: c.groups || '', placeholder: 'Fx Børn', oninput: (e) => { c.groups = e.target.value; save(); hintEl.textContent = KIT.childRuleText(settings()); } }),
+        h('span', { class: 'hint' }, 'Skriv begyndelsen af gruppens navn, som det hedder i Cicero. Flere navne adskilles med komma, fx "Børn, Skole". Store og små bogstaver er ligegyldige.')) : null,
+      both ? h('div', { class: 'q' }, h('span', { class: 'l' }, 'Når begge er valgt'),
+        h('div', { class: 'radios' }, Object.entries(KIT.CHILD_MODES).map(([k, [l, d]]) => h('label', { class: 'radio' + (c.mode === k ? ' on' : '') },
+          h('input', { type: 'radio', name: 'childmode', checked: c.mode === k, onchange: () => set('mode', k) }), h('span', null, h('b', null, l), h('small', null, d)))))) : null,
+      (hintEl = h('div', { class: 'note' }, KIT.childRuleText(settings())))
+    ];
+  }
+  let hintEl = null;
+
+  // ---------- testdata til Cicero ----------
+  function testDataDialog() {
+    const p = persona();
+    const po = p.o || {};
+    const st = { child: !!po.child, count: po.count || 2, per: Array.isArray(po.periodical), noPhone: p.id === 'm2', noDob: false };
+    const hasList = !!M().list;
+    modal('Testdata til Cicero', (b, close) => {
+      const body = h('div', { style: 'display:grid;gap:14px' });
+      let txt = '';
+      const draw = () => {
+        const extra = { child: st.child, noPhone: st.noPhone, noDob: st.noDob };
+        if (hasList) { extra.count = st.count; extra.periodical = st.per ? [Math.min(1, st.count - 1)] : false; }
+        const d = KIT.personaData(M(), T(), { o: {}, adult18: !!p.adult18 }, settings(), S.protocol, extra);
+        txt = KIT.ciceroData(d);
+        let kid = false; try { kid = KIT.isChild(M(), T(), d, settings()); } catch (e) { /* ignore */ }
+        const upd = (k, v) => { st[k] = v; draw(); };
+        body.replaceChildren(
+          h('p', { style: 'margin:0;color:var(--muted)' }, 'Cicero viser forhåndsvisningen med nogle testdata, som man selv kan rette i. Her kan du lave nye, så du kan se beskeden for et barn, med flere lån osv. Det er de samme opdigtede data, som værkstedet bruger.'),
+          h('div', { class: 'grid2' },
+            h('div', { class: 'q' }, h('span', { class: 'l' }, 'Låneren'), pills([[false, 'Voksen'], [true, 'Barn']], st.child, (v) => upd('child', v)),
+              h('span', { class: 'hint' }, st.child ? 'Under 18 år og i lånergruppen "' + (KIT.childRule(settings()).names[0] || 'Børn') + '".' : 'Voksen og i lånergruppen "Voksne".')),
+            hasList ? h('div', { class: 'q' }, h('span', { class: 'l' }, 'Antal lån'), pills([1, 2, 3, 4, 5].map((n) => [n, String(n)]), st.count, (v) => upd('count', v))) : h('div')),
+          h('div', { class: 'checks' },
+            hasList ? h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: st.per, onchange: (e) => upd('per', e.target.checked) }), 'Et af lånene er et tidsskrift') : null,
+            h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: st.noPhone, onchange: (e) => upd('noPhone', e.target.checked) }), 'Låneren mangler telefon og e-mail'),
+            h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: st.noDob, onchange: (e) => upd('noDob', e.target.checked) }), 'Låneren mangler fødselsdato')),
+          h('div', { class: 'note' + (kid !== st.child ? ' warn' : '') }, 'Med jeres opsætning regnes låneren som ', h('b', null, kid ? 'barn' : 'voksen'), '. ', KIT.childRuleText(settings())),
+          h('button', { class: 'btn primary', style: 'justify-self:start', onclick: () => copyText(txt, 'Testdata kopieret') }, ic('copy'), 'Kopiér testdata'),
+          h('ol', null,
+            h('li', null, 'Åbn skabelonen i Cicero, og find testdata ved forhåndsvisningen.'),
+            h('li', null, 'Markér alle testdata, og sæt de kopierede ind i stedet.'),
+            h('li', null, 'Opdatér forhåndsvisningen.')),
+          h('details', { class: 'adv' }, h('summary', null, 'Se testdata (' + txt.trim().split('\n').length + ' linjer)'), h('pre', null, txt)),
+          h('div', { class: 'row' }, h('button', { class: 'btn', onclick: close }, 'Luk')));
+      };
+      draw();
+      b.append(body);
+    }, true);
+  }
+  function copyText(t, msg) {
+    const fallback = () => { const det = document.querySelector('.modal details'); if (det) det.open = true; const pre = document.querySelector('.modal pre'); if (pre) { const r = document.createRange(); r.selectNodeContents(pre); const g = getSelection(); g.removeAllRanges(); g.addRange(r); toast('Teksten er markeret. Tryk Ctrl+C for at kopiere.'); } };
+    try { navigator.clipboard.writeText(t).then(() => toast(msg || 'Kopieret'), fallback); } catch (e) { fallback(); }
   }
   function copyDialog() {
     const c = code();
@@ -2817,6 +2984,7 @@ body.dragging .gap { height: 18px; }
           h('li', null, 'Vælg skabelonen for ', h('b', null, S.protocol === 'EMAIL' ? 'E-mail' : 'Digital Post'), '. I den gamle klient hedder nøglen ', h('code', null, key || '?'), '.'),
           h('li', null, 'Markér alt i feltet, og sæt den kopierede skabelon ind i stedet.'),
           h('li', null, 'Tryk ', h('b', null, 'Forhåndsvisning'), ' i Cicero. Ser den rigtig ud, så gem.')),
+        h('p', { class: 'hint', style: 'margin:0;color:var(--muted);font-size:14px' }, 'Vil du se beskeden for et barn eller med flere lån i Cicero? ', h('a', { href: '#', onclick: (e) => { e.preventDefault(); close(); testDataDialog(); } }, 'Lav testdata til Cicero'), '.'),
         h('details', { class: 'adv' }, h('summary', null, 'Se koden'), h('pre', null, c)),
         h('div', { class: 'row' }, h('button', { class: 'btn', onclick: close }, 'Luk')));
     }, true);

@@ -137,8 +137,9 @@
       if (/^(preferredLanguage|loanerPreferredLanguage)$/.test(n)) return o.lang;
       if (n === 'dateOfBirth') return o.child ? addDays(o.now, -9 * 365 - 40) : new Date(1985, 2, 15, 12);
       if (n === 'isUnderage') return !!o.child;
-      if (n === 'periodical') return !!o.periodical;
-      if (n === 'periodicalName' || n === 'periodicalInfo') return o.periodical ? 'Nr. 6, 2026' : undefined;
+      const isPer = Array.isArray(o.periodical) ? o.periodical.includes(ctx && ctx.list ? ctx.idx : 0) : !!o.periodical;
+      if (n === 'periodical') return isPer;
+      if (n === 'periodicalName' || n === 'periodicalInfo') return isPer ? 'Nr. 8, 2026' : undefined;
       if (n === 'absenceFrom' || n === 'absenceTo') return undefined;
       if (n === 'protocol') return o.protocol;
       if (ctx && ctx.groups) {
@@ -159,8 +160,8 @@
         if (n === 'serviceHoursEndTime') return closed ? '' : (day >= 5 ? '14:00' : '17:00');
       }
       const idx = ctx && ctx.list ? ctx.idx : 0;
-      if (n === 'title') return par === 'customNotification' ? 'Ændrede åbningstider' : TITLES[idx % TITLES.length];
-      if (n === 'author') return AUTHORS[idx % AUTHORS.length];
+      if (n === 'title') return par === 'customNotification' ? 'Ændrede åbningstider' : isPer && Array.isArray(o.periodical) ? 'Læsehesten' : TITLES[idx % TITLES.length];
+      if (n === 'author') return isPer && Array.isArray(o.periodical) ? '' : AUTHORS[idx % AUTHORS.length];
       if (n === 'classification') return CLASSES[idx % CLASSES.length];
       if (n === 'itemNumber' || n === 'materialNumber' || n === 'barcode') return String(5163870 + idx * 4711);
       if (n === 'reservationPickupInformation' || n === 'reservationPickupInformationr') return String(3 + idx * 14);

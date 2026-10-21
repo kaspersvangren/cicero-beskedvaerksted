@@ -1,16 +1,16 @@
-/* Beskedværkstedet v0.3 – byggesæt med motoren under. Kræver FTL, CAT, MODEL, KIT og window.CATALOG_RAW. */
+/* Beskedværkstedet v0.4 – byggesæt med motoren under. Kræver FTL, CAT, MODEL, KIT og window.CATALOG_RAW. */
 (function () {
   'use strict';
-  const VERSION = 'v0.3';
+  const VERSION = 'v0.4';
   const CATALOG = CAT.load(window.CATALOG_RAW);
   const STORE = 'beskedvaerksted.v3';
   const WHO = { all: 'Alle', adult: 'Kun voksne', child: 'Kun børn' };
   const SETTINGS_FIELDS = [['name', 'Bibliotekets navn', 'Fx Gladsaxe Bibliotekerne'], ['address', 'Adresse', 'Fx Søborg Hovedgade 220, 2860 Søborg'], ['phone', 'Telefon', 'Fx 39 57 00 00'], ['email', 'E-mail', 'Fx bibliotek@kommune.dk'], ['web', 'Hjemmeside', 'Fx bibliotek.dk'], ['note', 'Fri tekst, fx åbningstider', 'Fx Åbent alle dage 7–22']];
 
   // ---------- tilstand ----------
-  const defaults = () => ({ settings: { name: '', address: '', phone: '', email: '', web: '', note: '' }, docs: {}, protocol: 'EMAIL', persona: {}, msgId: null });
+  const defaults = () => ({ settings: { name: '', address: '', phone: '', email: '', web: '', note: '', child: Object.assign({}, KIT.CHILD_DEFAULT) }, docs: {}, protocol: 'EMAIL', persona: {}, msgId: null });
   let S = defaults();
-  try { const raw = localStorage.getItem(STORE); if (raw) { const d = JSON.parse(raw); S = Object.assign(defaults(), d); S.settings = Object.assign(defaults().settings, d.settings || {}); } } catch (e) { /* ingen lagring */ }
+  try { const raw = localStorage.getItem(STORE); if (raw) { const d = JSON.parse(raw); S = Object.assign(defaults(), d); S.settings = Object.assign(defaults().settings, d.settings || {}); S.settings.child = Object.assign({}, KIT.CHILD_DEFAULT, S.settings.child || {}); } } catch (e) { /* ingen lagring */ }
   let view = S.msgId ? 'work' : 'choose';
   let sel = null; // { sec } eller { sec, part } eller { subject: true, part }
   let undoStack = [];
@@ -59,11 +59,12 @@
   }
   const cx = () => KIT.ctxOf(M(), T());
   function chipValue(p) { const r = renderNodes(KIT.chipNodes(p, cx(), settings())); return r.err ? '⚠' : r.out; }
+  let CHILD = null;
+  function isChildNow() { if (CHILD == null) { try { CHILD = KIT.isChild(M(), T(), data(), settings()); } catch (e) { CHILD = false; } } return CHILD; }
   function isVisible(s) {
-    const c = KIT.whoCond(s.who, cx());
-    if (!c) return true;
-    const r = renderNodes([{ t: 'if', branches: [{ cond: c, body: [{ t: 'text', v: '1' }] }], else: [{ t: 'text', v: '0' }] }]);
-    return r.out === '1';
+    if (s.who === 'adult') return !isChildNow();
+    if (s.who === 'child') return isChildNow();
+    return true;
   }
   function chipLabel(p) {
     switch (p.c) {
@@ -81,7 +82,7 @@
   const app = document.getElementById('app');
   function render() {
     closePop();
-    DATA = null;
+    DATA = null; CHILD = null;
     app.replaceChildren(top(), view === 'choose' ? choose() : work());
   }
   function top() {
@@ -110,7 +111,8 @@
       h('div', { class: 'titlerow' }, h('button', { class: 'back', onclick: () => { view = 'choose'; sel = null; render(); } }, '← Alle beskeder'), h('h2', null, M().title)),
       h('div', null,
         h('div', { class: 'viewas' }, 'Vis beskeden, som den ser ud for', h('div', { class: 'seg', role: 'group' },
-          M().personas.map((p) => h('button', { 'aria-pressed': String(persona().id === p.id), onclick: () => { S.persona[S.msgId] = p.id; save(); render(); } }, p.label)))),
+          M().personas.map((p) => h('button', { 'aria-pressed': String(persona().id === p.id), title: p.sub || null, onclick: () => { S.persona[S.msgId] = p.id; save(); render(); } }, p.label))),
+          h('button', { class: 'btn ghost small', onclick: testDataDialog, title: 'Lav testdata, så du kan se beskeden for et barn, med flere lån osv. i Ciceros forhåndsvisning' }, 'Testdata til Cicero')),
         mail()),
       h('aside', { class: 'side' }, sidePanel()));
   }
@@ -355,7 +357,7 @@
   function whoQ(s) {
     return h('div', { class: 'q' }, h('span', { class: 'l' }, 'Hvem skal se afsnittet?'),
       h('div', { class: 'pills' }, Object.entries(WHO).map(([k, l]) => h('button', { class: 'pill', 'aria-pressed': String(s.who === k), onclick: () => { snapshot(); s.who = k; save(); render(); } }, l))),
-      h('span', { class: 'hint' }, 'Børn er lånere under 18 år, regnet ud fra fødselsdatoen den dag, beskeden sendes.'));
+      h('span', { class: 'hint' }, KIT.childRuleText(settings()), ' ', h('a', { href: '#', onclick: (e) => { e.preventDefault(); openSettings(); } }, 'Ret i Opsætning')));
   }
   function textPanel(s) {
     return [h('div', { class: 'panel' }, h('h3', null, ic('text'), 'Tekstafsnit', h('span', { class: 'sp' }), closeBtn()),
@@ -472,8 +474,73 @@
       b.append(h('p', { style: 'margin:0;color:var(--muted)' }, 'Bibliotekets faste oplysninger. De bruges i "Kontaktoplysninger" og i felter som hjemmeside og telefon. De gemmes kun i denne browser.'));
       const grid = h('div', { class: 'grid2' });
       SETTINGS_FIELDS.forEach(([k, l, ph]) => grid.append(h('label', { class: 'q' }, h('span', { class: 'l' }, l), h('input', { type: 'text', value: S.settings[k] || '', placeholder: ph, oninput: (e) => { S.settings[k] = e.target.value; save(); } }))));
-      b.append(grid, h('div', { class: 'row' }, h('button', { class: 'btn primary', onclick: () => { close(); render(); } }, 'Færdig')));
+      const kids = h('div', { class: 'childset' });
+      const drawKids = () => kids.replaceChildren(...childSettings(drawKids));
+      drawKids();
+      b.append(grid, kids, h('div', { class: 'row' }, h('button', { class: 'btn primary', onclick: () => { close(); render(); } }, 'Færdig')));
     });
+  }
+  function childSettings(redraw) {
+    const c = S.settings.child;
+    const set = (k, v) => { c[k] = v; if (!c.age && !c.group) c[k === 'age' ? 'group' : 'age'] = true; save(); redraw(); };
+    const both = c.age && c.group;
+    return [
+      h('h4', null, 'Hvem er børnelånere?'),
+      h('p', { class: 'sub' }, 'Bruges i afsnit, der kun skal ses af børn eller kun af voksne. Alle, der ikke er børn, regnes som voksne, også hvis oplysningen mangler.'),
+      h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: !!c.age, onchange: (e) => set('age', e.target.checked) }), 'Alder: under 18 år, ud fra fødselsdatoen'),
+      h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: !!c.group, onchange: (e) => set('group', e.target.checked) }), 'Lånergruppe: navnet starter med …'),
+      c.group ? h('label', { class: 'q indent' }, h('input', { type: 'text', value: c.groups || '', placeholder: 'Fx Børn', oninput: (e) => { c.groups = e.target.value; save(); hintEl.textContent = KIT.childRuleText(settings()); } }),
+        h('span', { class: 'hint' }, 'Skriv begyndelsen af gruppens navn, som det hedder i Cicero. Flere navne adskilles med komma, fx "Børn, Skole". Store og små bogstaver er ligegyldige.')) : null,
+      both ? h('div', { class: 'q' }, h('span', { class: 'l' }, 'Når begge er valgt'),
+        h('div', { class: 'radios' }, Object.entries(KIT.CHILD_MODES).map(([k, [l, d]]) => h('label', { class: 'radio' + (c.mode === k ? ' on' : '') },
+          h('input', { type: 'radio', name: 'childmode', checked: c.mode === k, onchange: () => set('mode', k) }), h('span', null, h('b', null, l), h('small', null, d)))))) : null,
+      (hintEl = h('div', { class: 'note' }, KIT.childRuleText(settings())))
+    ];
+  }
+  let hintEl = null;
+
+  // ---------- testdata til Cicero ----------
+  function testDataDialog() {
+    const p = persona();
+    const po = p.o || {};
+    const st = { child: !!po.child, count: po.count || 2, per: Array.isArray(po.periodical), noPhone: p.id === 'm2', noDob: false };
+    const hasList = !!M().list;
+    modal('Testdata til Cicero', (b, close) => {
+      const body = h('div', { style: 'display:grid;gap:14px' });
+      let txt = '';
+      const draw = () => {
+        const extra = { child: st.child, noPhone: st.noPhone, noDob: st.noDob };
+        if (hasList) { extra.count = st.count; extra.periodical = st.per ? [Math.min(1, st.count - 1)] : false; }
+        const d = KIT.personaData(M(), T(), { o: {}, adult18: !!p.adult18 }, settings(), S.protocol, extra);
+        txt = KIT.ciceroData(d);
+        let kid = false; try { kid = KIT.isChild(M(), T(), d, settings()); } catch (e) { /* ignore */ }
+        const upd = (k, v) => { st[k] = v; draw(); };
+        body.replaceChildren(
+          h('p', { style: 'margin:0;color:var(--muted)' }, 'Cicero viser forhåndsvisningen med nogle testdata, som man selv kan rette i. Her kan du lave nye, så du kan se beskeden for et barn, med flere lån osv. Det er de samme opdigtede data, som værkstedet bruger.'),
+          h('div', { class: 'grid2' },
+            h('div', { class: 'q' }, h('span', { class: 'l' }, 'Låneren'), pills([[false, 'Voksen'], [true, 'Barn']], st.child, (v) => upd('child', v)),
+              h('span', { class: 'hint' }, st.child ? 'Under 18 år og i lånergruppen "' + (KIT.childRule(settings()).names[0] || 'Børn') + '".' : 'Voksen og i lånergruppen "Voksne".')),
+            hasList ? h('div', { class: 'q' }, h('span', { class: 'l' }, 'Antal lån'), pills([1, 2, 3, 4, 5].map((n) => [n, String(n)]), st.count, (v) => upd('count', v))) : h('div')),
+          h('div', { class: 'checks' },
+            hasList ? h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: st.per, onchange: (e) => upd('per', e.target.checked) }), 'Et af lånene er et tidsskrift') : null,
+            h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: st.noPhone, onchange: (e) => upd('noPhone', e.target.checked) }), 'Låneren mangler telefon og e-mail'),
+            h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: st.noDob, onchange: (e) => upd('noDob', e.target.checked) }), 'Låneren mangler fødselsdato')),
+          h('div', { class: 'note' + (kid !== st.child ? ' warn' : '') }, 'Med jeres opsætning regnes låneren som ', h('b', null, kid ? 'barn' : 'voksen'), '. ', KIT.childRuleText(settings())),
+          h('button', { class: 'btn primary', style: 'justify-self:start', onclick: () => copyText(txt, 'Testdata kopieret') }, ic('copy'), 'Kopiér testdata'),
+          h('ol', null,
+            h('li', null, 'Åbn skabelonen i Cicero, og find testdata ved forhåndsvisningen.'),
+            h('li', null, 'Markér alle testdata, og sæt de kopierede ind i stedet.'),
+            h('li', null, 'Opdatér forhåndsvisningen.')),
+          h('details', { class: 'adv' }, h('summary', null, 'Se testdata (' + txt.trim().split('\n').length + ' linjer)'), h('pre', null, txt)),
+          h('div', { class: 'row' }, h('button', { class: 'btn', onclick: close }, 'Luk')));
+      };
+      draw();
+      b.append(body);
+    }, true);
+  }
+  function copyText(t, msg) {
+    const fallback = () => { const det = document.querySelector('.modal details'); if (det) det.open = true; const pre = document.querySelector('.modal pre'); if (pre) { const r = document.createRange(); r.selectNodeContents(pre); const g = getSelection(); g.removeAllRanges(); g.addRange(r); toast('Teksten er markeret. Tryk Ctrl+C for at kopiere.'); } };
+    try { navigator.clipboard.writeText(t).then(() => toast(msg || 'Kopieret'), fallback); } catch (e) { fallback(); }
   }
   function copyDialog() {
     const c = code();
@@ -493,6 +560,7 @@
           h('li', null, 'Vælg skabelonen for ', h('b', null, S.protocol === 'EMAIL' ? 'E-mail' : 'Digital Post'), '. I den gamle klient hedder nøglen ', h('code', null, key || '?'), '.'),
           h('li', null, 'Markér alt i feltet, og sæt den kopierede skabelon ind i stedet.'),
           h('li', null, 'Tryk ', h('b', null, 'Forhåndsvisning'), ' i Cicero. Ser den rigtig ud, så gem.')),
+        h('p', { class: 'hint', style: 'margin:0;color:var(--muted);font-size:14px' }, 'Vil du se beskeden for et barn eller med flere lån i Cicero? ', h('a', { href: '#', onclick: (e) => { e.preventDefault(); close(); testDataDialog(); } }, 'Lav testdata til Cicero'), '.'),
         h('details', { class: 'adv' }, h('summary', null, 'Se koden'), h('pre', null, c)),
         h('div', { class: 'row' }, h('button', { class: 'btn', onclick: close }, 'Luk')));
     }, true);
